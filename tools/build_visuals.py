@@ -236,7 +236,7 @@ def build_hotspots(payload, frames, out_path):
             d.text((col_x, ty), title, fill=colr, font=F_H2)
             for k, it in enumerate(items[:4]):
                 d.text((col_x, ty + 42 + k * 34), 'near %s' % it['name'], fill=INK, font=F_LEG)
-                d.text((col_x + 400, ty + 42 + k * 34), '%+.0f pts' % (100 * it['km2']), fill=colr, font=F_LEG, anchor='ra')
+                d.text((col_x + 470, ty + 42 + k * 34), '%+.0f pts' % (100 * it['km2']), fill=colr, font=F_LEG, anchor='ra')
     footer(d, 'pts = percentage points of each 1 km\u00b2 area \u00b7 area names are approximate (nearest reference place)')
     canvas.save(out_path)
     return out_path

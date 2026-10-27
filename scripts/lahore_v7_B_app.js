@@ -2223,10 +2223,20 @@ function exportGraphicsData() {
     loss: cells.sort('sum', true).limit(12).reduceColumns(ee.Reducer.toList(3), cols).get('list')
   }).evaluate(function (r, err) {
     if (err) { print('Graphics data error: ' + err); return; }
+    // label hotspots with the nearest recognisable neighbourhood or town (dropdown list), not villages
+    var nearestHood = function (lon, lat) {
+      var best = null, bestKm = 1e9;
+      PLACES.forEach(function (p) {
+        var dx = (p[1] - lon) * 111.32 * Math.cos(lat * Math.PI / 180), dy = (p[2] - lat) * 110.57;
+        var km = Math.sqrt(dx * dx + dy * dy);
+        if (km < bestKm) { bestKm = km; best = p[0]; }
+      });
+      return best;
+    };
     var named = function (list) {           // one entry per place name, at most 4
       var seen = {}, out = [];
       list.forEach(function (x) {
-        var nm = nearestPlace(x[1], x[2]).replace(/ \(.*\)$/, '');
+        var nm = nearestHood(x[1], x[2]);
         if (!seen[nm] && out.length < 4) { seen[nm] = true; out.push({name: nm, km2: Math.round(x[0] * 100) / 100}); }
       });
       return out;
