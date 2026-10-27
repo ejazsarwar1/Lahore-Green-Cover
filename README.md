@@ -31,9 +31,11 @@
 | Tree canopy, share of the district (3-30-300 rule) | 4.1% | 30% per neighbourhood |
 | Non-crop green per resident | 24 m² | commonly quoted minimum 9 m², ideal 50 m² |
 | Residents within 300 m of a park of at least 0.5 ha | 24% | 100% (WHO/Europe) |
-| Neighbourhoods meeting 30% canopy | 0 | all |
+| Neighbourhoods meeting 30% canopy | 0 of 137 | all |
 
-The district share includes farmland, so the fair comparison with the 30% target is neighbourhood by neighbourhood. The app shows that map.
+The district share includes farmland, so the fair comparison with the 30% target is neighbourhood by neighbourhood. Even the leafiest areas stay below it: Zaman Park (25%), Mayo Gardens (24%) and GOR (24%). Bagrian, DHA Phase 9 Prism and Chah Miran have the least canopy, at under 2%.
+
+![Lahore vs green-space benchmarks](graphics/lahore_vs_benchmarks.png)
 
 ![Where Lahore gained and lost green](graphics/lahore_green_hotspots.png)
 

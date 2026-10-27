@@ -43,6 +43,7 @@ var BUILDINGS_ID = 'GOOGLE/Research/open-buildings-temporal/v1'; // Google Open 
 var BUILDINGS_LAST = 2023;  // last year in the Open Buildings Temporal dataset
 var MAX_TREE_UNDER_GRASS = 0.3;
 var STAT_SCALE = 30;
+var EXPORT_GRAPHICS = false;   // true: also print GRAPHICS_DATA to the Console for tools/build_visuals.py
 var MAP_HEIGHT = '500px';
 var FOLDER = 'lahore_gee_v7';
 var BOUNDARY_ASSET = '';
@@ -860,7 +861,7 @@ function pctTxt(x) { return (x >= 0 ? '+' : '') + fmt(x, 0) + '%'; }
 // ---------------------------------------------------------------------
 // After publishing the polished timelapse GIF (e.g. on GitHub), paste its
 // direct image link here and the Timelapse page will show it:
-var TIMELAPSE_GIF_URL = '';
+var TIMELAPSE_GIF_URL = 'https://raw.githubusercontent.com/ejazsarwar1/Lahore-Green-Cover/main/graphics/lahore_green_timelapse.gif';
 
 var COL = {dark: '#14532d', green: '#1b7837', light: '#eef5ec', line: '#cfe3cb', ink: '#212529',
            muted: '#5f6b66', red: '#b2182b'};
@@ -2186,6 +2187,86 @@ function exportYear() {
 }
 
 // ---------------------------------------------------------------------
+// 8b. GRAPHICS DATA (only when EXPORT_GRAPHICS = true): prints GRAPHICS_DATA to the Console
+//     for tools/build_visuals.py (hotspot map and Lahore vs benchmarks graphic)
+// ---------------------------------------------------------------------
+var HOT_VIS = {min: -0.15, max: 0.15,
+  palette: ['#b2182b', '#ef8a62', '#fddbc7', '#f7f7f7', '#d9f0d3', '#7fbf7b', '#1b7837']};
+
+function exportGraphicsData() {
+  var y0 = firstYear(), y1 = lastComplete();
+  print('Preparing graphics data for ' + y0 + ' → ' + y1 + ' (1–3 min)…');
+  // green gained or lost per 1 km square, named after the nearest place
+  var dG = greenAreaImg(y1).subtract(greenAreaImg(y0)).rename('d');
+  var cells = dG.reduceRegions({collection: geom.coveringGrid(ee.Projection('EPSG:32643').atScale(1000)),
+      reducer: ee.Reducer.sum(), scale: STAT_SCALE, tileScale: 4})
+    .filter(ee.Filter.notNull(['sum']))
+    .map(function (f) {
+      var c = f.geometry().centroid(1).coordinates();
+      return f.set({lon: c.get(0), lat: c.get(1)});
+    });
+  var cellImg = cells.reduceToImage(['sum'], ee.Reducer.first()).rename('d').clip(geom);
+  var bg = ee.Image(1).visualize({palette: ['f4f4f4']});
+  var hotPng = bg.blend(cellImg.visualize(HOT_VIS)).blend(outline);
+  // Lahore vs benchmarks for the last complete year
+  var stack = ee.Image.cat([treeAreaImg(y1), greenAreaImg(y1), AREA.rename('all'), peopleImg(),
+                            peopleImg().multiply(nearParkImg()).rename('popNear')]).clip(geom);
+  var tot = stack.reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE,
+    maxPixels: 1e11, tileScale: 4});
+  var zones = stack.select(['trees', 'green', 'all', 'pop']).addBands(zoneImage())
+    .reduceRegion({reducer: ee.Reducer.sum().repeat(4).group({groupField: 4, groupName: 'zone'}),
+      geometry: geom, scale: STAT_SCALE, maxPixels: 1e11, tileScale: 8});
+  var cols = ['sum', 'lon', 'lat'];
+  ee.Dictionary({
+    tot: tot, zones: zones.get('groups'),
+    gain: cells.sort('sum', false).limit(12).reduceColumns(ee.Reducer.toList(3), cols).get('list'),
+    loss: cells.sort('sum', true).limit(12).reduceColumns(ee.Reducer.toList(3), cols).get('list')
+  }).evaluate(function (r, err) {
+    if (err) { print('Graphics data error: ' + err); return; }
+    var named = function (list) {           // one entry per place name, at most 4
+      var seen = {}, out = [];
+      list.forEach(function (x) {
+        var nm = nearestPlace(x[1], x[2]).replace(/ \(.*\)$/, '');
+        if (!seen[nm] && out.length < 4) { seen[nm] = true; out.push({name: nm, km2: Math.round(x[0] * 100) / 100}); }
+      });
+      return out;
+    };
+    var rows = (r.zones || []).map(function (g) {
+      var s = g.sum;
+      return {zone: g.zone, name: ZONE_PLACES[g.zone][0], village: g.zone >= PLACES.length,
+        canopy: 100 * s[0] / s[2], perRes: s[3] > 0 ? 1e6 * s[1] / s[3] : null, pop: s[3]};
+    });
+    var hoods = rows.filter(function (z) { return !z.village; });
+    var byCanopy = hoods.slice().sort(function (a, b) { return b.canopy - a.canopy; });
+    var brief = function (z) { return {name: z.name, canopy: Math.round(z.canopy * 10) / 10}; };
+    var classes = [0, 0, 0, 0, 0];
+    hoods.forEach(function (z) { classes[bmClass(z.canopy)]++; });
+    var zoneLayer = zoneImage().remap(rows.map(function (z) { return z.zone; }),
+                                      rows.map(function (z) { return bmClass(z.canopy); }))
+      .visualize({min: 0, max: 4, palette: BM_PAL});
+    var benchPng = bg.blend(zoneLayer).blend(outline);
+    var t = r.tot;
+    var params = {region: GIF_REGION, dimensions: 1080, crs: 'EPSG:3857', format: 'png'};
+    hotPng.getThumbURL(params, function (hotUrl) {
+      benchPng.getThumbURL(params, function (benchUrl) {
+        print('GRAPHICS_DATA ' + JSON.stringify({
+          region: [73.98, 31.06, 74.63, 31.70], hotspotYears: [y0, y1], hotspotScale: 0.15,
+          hotColours: HOT_VIS.palette,
+          frames: {hotspot: hotUrl, bench: benchUrl},
+          gains: named(r.gain), losses: named(r.loss),
+          bench: {year: y1, canopy: 100 * t.trees / t.all, perRes: 1e6 * t.green / t.pop,
+            parkAccess: 100 * t.popNear / t.pop, population: t.pop,
+            meet: hoods.filter(function (z) { return z.canopy >= 30; }).length, hoods: hoods.length,
+            classes: classes, palette: BM_PAL,
+            top: byCanopy.slice(0, 5).map(brief), bottom: byCanopy.slice(-5).reverse().map(brief)}
+        }));
+        print('Copy the whole GRAPHICS_DATA line above and send it to Claude.');
+      });
+    });
+  });
+}
+
+// ---------------------------------------------------------------------
 // 9. START
 // ---------------------------------------------------------------------
 map.setCenter(74.30, 31.46, 10);
@@ -2205,6 +2286,7 @@ function start(found) {
     chFrom.setValue(String(firstYear()), false);
     chTo.setValue(String(lastComplete() || YEARS[YEARS.length - 1]), false);
     setMode('year');
+    if (EXPORT_GRAPHICS) exportGraphicsData();
   });
 }
 ee.data.listAssets(ASSET_FOLDER.replace(/\/$/, ''), {}, function (res, err) {

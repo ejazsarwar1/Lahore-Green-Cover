@@ -41,10 +41,13 @@ def hex2rgb(h):
 
 
 def load_payload(path):
+    """Reads a TIMELAPSE_DATA or GRAPHICS_DATA block pasted from the app's Console."""
     txt = open(path, encoding='utf-8').read()
-    i = txt.index('TIMELAPSE_DATA')
-    body = txt[i + len('TIMELAPSE_DATA'):].strip()
-    return json.JSONDecoder().raw_decode(body)[0]
+    key = 'GRAPHICS_DATA' if 'GRAPHICS_DATA' in txt else 'TIMELAPSE_DATA'
+    body = txt[txt.index(key) + len(key):].strip()
+    payload = json.JSONDecoder().raw_decode(body)[0]
+    payload['kind'] = key
+    return payload
 
 
 def fetch(url, path):
@@ -80,8 +83,32 @@ def footer(d, extra=None):
     d.text((W / 2, H - 32), SOURCES, fill=MUTED, font=F_SMALL, anchor='mm')
 
 
-def paste_map(canvas, path, top=170, max_h=760):
+MAP_BG, FARMLAND = (244, 244, 244), (228, 228, 224)
+
+
+def clean_map(m):
+    """Earth Engine maps drawn on a flat #f4f4f4 background: crop to the district, blend the
+    outside into the page and shade the background left inside the district (farmland)."""
+    from PIL import ImageChops
+    diff = ImageChops.difference(m, Image.new('RGB', m.size, MAP_BG)).convert('L').point(lambda v: 255 if v > 8 else 0)
+    box = diff.getbbox()
+    if box:
+        m = m.crop((max(0, box[0] - 6), max(0, box[1] - 6), min(m.width, box[2] + 6), min(m.height, box[3] + 6)))
+    for corner in ((0, 0), (m.width - 1, 0), (0, m.height - 1), (m.width - 1, m.height - 1)):
+        if m.getpixel(corner) == MAP_BG:
+            ImageDraw.floodfill(m, corner, BG, thresh=4)
+    px = m.load()
+    for y in range(m.height):
+        for x in range(m.width):
+            if px[x, y] == MAP_BG:
+                px[x, y] = FARMLAND
+    return m
+
+
+def paste_map(canvas, path, top=170, max_h=760, clean=False):
     m = Image.open(path).convert('RGB')
+    if clean:
+        m = clean_map(m)
     m.thumbnail((W - 80, max_h))
     mx = (W - m.width) // 2
     canvas.paste(m, (mx, top))
@@ -181,12 +208,12 @@ def build_hotspots(payload, frames, out_path):
     if 'hotspot' not in frames:
         return None
     y0, y1 = payload['hotspotYears']
-    story = payload.get('story') or {}
+    story = payload.get('story') or payload   # GRAPHICS_DATA keeps gains / losses at the top level
     scale = payload.get('hotspotScale', 0.12)
     canvas = Image.new('RGB', (W, H), BG)
     d = ImageDraw.Draw(canvas)
     header(d, 'Where Lahore Gained and Lost Green', 'Change in green share of the land, %d \u2192 %d \u00b7 trees, parks and lawns' % (y0, y1))
-    mx, my, mw, mh = paste_map(canvas, frames['hotspot'], max_h=720)
+    mx, my, mw, mh = paste_map(canvas, frames['hotspot'], max_h=720, clean=payload.get('kind') == 'GRAPHICS_DATA')
     # colour bar
     cols = [hex2rgb(c) for c in payload['hotColours']]
     bx0, bx1, by = 160, W - 160, my + mh + 36
@@ -215,7 +242,36 @@ def build_hotspots(payload, frames, out_path):
     return out_path
 
 
-# ---------------------------------------------------------------- 3. cover image
+# ---------------------------------------------------------------- 3. Lahore vs benchmarks
+BENCH_LABELS = ['Under 5%', '5–10%', '10–20%', '20–30%', '30%+ (target)']
+
+
+def build_bench(payload, frames, out_path):
+    b = payload.get('bench')
+    if not b or 'bench' not in frames:
+        return None
+    canvas = Image.new('RGB', (W, H), BG)
+    d = ImageDraw.Draw(canvas)
+    header(d, 'Lahore vs Green-Space Benchmarks',
+           'Tree canopy by neighbourhood, %d · against the 3-30-300 rule and WHO/Europe' % b['year'])
+    mx, my, mw, mh = paste_map(canvas, frames['bench'], max_h=640, clean=True)
+    items = [(c, '%s (%d)' % (t, n)) for c, t, n in zip(b['palette'], BENCH_LABELS, b['classes'])]
+    ly = legend_row(d, 60, my + mh + 18, items[:3], font_=F_SMALL)
+    ly = legend_row(d, 60, ly + 40, items[3:] + [('#e4e4e0', 'Farmland or open land')], font_=F_SMALL)
+    d.text((60, ly + 44), 'Bracketed numbers: neighbourhoods in each band', fill=MUTED, font=F_SMALL)
+    cy, cw, ch, gap = ly + 86, (W - 120 - 20) // 2, 132, 20
+    card(d, 60, cy, cw, ch, '%.1f%%' % b['canopy'], 'Tree canopy of the district (target 30%)', RED)
+    card(d, 60 + cw + gap, cy, cw, ch, '%.0f m²' % b['perRes'], 'Green per resident (minimum 9 m²)',
+         GREEN if b['perRes'] >= 9 else RED)
+    card(d, 60, cy + ch + gap, cw, ch, '%.0f%%' % b['parkAccess'], 'Within 300 m of a park (target 100%)', RED)
+    card(d, 60 + cw + gap, cy + ch + gap, cw, ch, '%d of %d' % (b['meet'], b['hoods']),
+         'Neighbourhoods at 30% canopy', GREEN if b['meet'] else RED)
+    footer(d, 'Zones: built-up land around OpenStreetMap places (approximate) · canopy is the model’s estimate')
+    canvas.save(out_path)
+    return out_path
+
+
+# ---------------------------------------------------------------- 4. cover image
 def card(d, x, y, w, h, number, label, colr=INK):
     d.rounded_rectangle([x, y, x + w, y + h], radius=18, fill=(255, 255, 255), outline=LINE, width=2)
     d.text((x + 24, y + 22), number, fill=colr, font=F_CARD_N)
@@ -310,6 +366,10 @@ if __name__ == '__main__':
         payload = load_payload(data_path)
         frames = fetch_all(payload, work_dir)
     os.makedirs(out_dir, exist_ok=True)
+    if payload.get('kind') == 'GRAPHICS_DATA':
+        print('Hotspots:', build_hotspots(payload, frames, os.path.join(out_dir, 'lahore_green_hotspots.png')))
+        print('Bench   :', build_bench(payload, frames, os.path.join(out_dir, 'lahore_vs_benchmarks.png')))
+        sys.exit(0)
     print('GIF     :', build_gif(payload, frames, os.path.join(out_dir, 'lahore_green_timelapse.gif')))
     print('Hotspots:', build_hotspots(payload, frames, os.path.join(out_dir, 'lahore_green_hotspots.png')))
     print('Cover   :', build_cover(payload, frames, os.path.join(out_dir, 'lahore_green_cover.png')))
