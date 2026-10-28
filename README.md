@@ -18,7 +18,7 @@
 | Share of the district | 16.3% | 18.4% | +2.1 points |
 
 - Lahore's non-crop green cover **grew by about 35 km² between 2019 and 2025**, and both NASA's GEDI space laser and Google Open Buildings point the same way.
-- The rise is **not yet a statistically established trend**: year-to-year swings are large and partly follow rainfall (r = 0.62).
+- The rise is **not yet a statistically established trend**: 7 years of data (2019–2025) is too short, and year-to-year swings are large and partly follow rainfall (r = 0.62).
 - Green is still being lost to construction. **21.4 km² was newly built between 2019 and 2023**, and green cover fell on 77% of that land.
 - The model under-counts tree area by about 9% of itself, mostly small trees. Allowing for this, 2025 tree cover is about 76 km², not 70 km². That's a change of less than half a percentage point of the district.
 
@@ -65,11 +65,11 @@ Ten scored checks test the model against data it was **not** trained on:
 | C6 Robust to model settings | ✅ +6% to +14% across variants |
 | C7 Three methods agree on direction | ⚠ +13% to +76% |
 | C8 Grass/crop classifier accuracy | ✅ |
-| C9 Trend and 95% confidence interval | ⚠ positive, not significant |
+| C9 Trend and 95% confidence interval | ⚠ positive, not significant (7 years is too short) |
 | C10 Independent: NASA GEDI laser canopy heights | ✅ r = 0.62 |
 | C11 Independent: green lost where new buildings appeared | ✅ |
 
-**Verdict: partly supported.** The direction is independently confirmed, but six years is too short to prove a trend. Without field visits, the best this method can reach is "well supported", not "field-verified".
+**Verdict: partly supported.** The direction is independently confirmed, but 7 years of data (2019–2025) is too short to prove a trend. Without field visits, the best this method can reach is "well supported", not "field-verified".
 
 ---
 

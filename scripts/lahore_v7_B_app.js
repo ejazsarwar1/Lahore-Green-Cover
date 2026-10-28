@@ -1299,7 +1299,8 @@ var SAVED_CHECKS = [
   ['C6', 'PASS', 'Change 2019→2025 stays between +6% and +14% across model settings'],
   ['C7', 'WARN', 'Three methods agree the cover rose, but disagree on how much (+13% to +76%)'],
   ['C8', 'PASS', 'Grass / crop classifier passes on held-out points'],
-  ['C9', 'WARN', 'Total +5.0 km²/yr (95% CI −1.7 to +11.0); trees +1.0 km²/yr (CI −2.4 to +4.7): not yet established'],
+  ['C9', 'WARN', 'Total +5.0 km²/yr (95% CI −1.7 to +11.0); trees +1.0 km²/yr (CI −2.4 to +4.7): not yet established, as 7 years of data ' +
+    '(2019–2025) is too short to prove a trend'],
   ['C10', 'PASS', 'NASA GEDI laser canopy heights agree with the tree change (r = 0.62)'],
   ['C11', 'PASS', '21.4 km² newly built 2019–2023 (Open Buildings); green fell on 77% of it, 1.7 km² lost'],
   ['D1', 'INFO', 'Diagnostic only (spread between the three tree models)'],
@@ -1323,7 +1324,7 @@ function savedTrendChart() {
   });
   return ui.Chart(rows, 'LineChart', {
     title: 'Non-crop green area (km\u00b2) \u00b7 trend +' + SAVED_SEN.toFixed(1) +
-      ' km\u00b2/yr, not yet statistically significant \u00b7 2026* provisional',
+      ' km\u00b2/yr, not yet statistically significant (7 years is too short) \u00b7 2026* provisional',
     titleTextStyle: {fontSize: 12, bold: false, color: '#444'},
     colors: ['#1b7837', '#93c02c', '#0b5a2a', '#888888'],
     series: {0: {lineWidth: 3, pointSize: 6}, 1: {lineWidth: 2, pointSize: 4}, 2: {lineWidth: 2, pointSize: 4},
@@ -1398,7 +1399,7 @@ function aboutPanel() {
     'small trees (about 70 km² shown is really about 76 km²; a change of under half a percentage point of ' +
     'Lahore, not 9 points).\n' +
     '• Year-to-year changes are partly weather-related; the 2019–2025 increase is not yet a statistically ' +
-    'proven trend (details in "How We Know").\n' +
+    'proven trend, because 7 years of data is too short (details in "How We Know").\n' +
     '• Neighbourhood names are approximate reference points, not boundaries.\n' +
     '• The district outline is simplified (geoBoundaries).', PARA));
   p.add(ui.Label('Data sources', HEADING));
