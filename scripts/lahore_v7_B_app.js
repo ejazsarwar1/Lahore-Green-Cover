@@ -1539,12 +1539,15 @@ function bmLegend() {
 // per-zone and district totals. When both assets exist the tab loads in seconds; otherwise it computes live.
 var BENCH_STATS_ASSET = ASSET_FOLDER + 'lahore_bench_stats';
 var BENCH_ZONES_ASSET = ASSET_FOLDER + 'lahore_bench_zones';
-var ASSET_NAMES = [];
-function hasAsset(id) {
-  var tail = id.split('/').pop();
-  return ASSET_NAMES.some(function (n) { return n.slice(-tail.length - 1) === '/' + tail; });
+// Published apps may not be allowed to list the asset folder, so each saved asset is looked up directly.
+var BENCH_OK = false;
+function checkBenchAssets() {
+  ee.data.getAsset(BENCH_STATS_ASSET, function (a, e1) {
+    if (e1 || !a) return;
+    ee.data.getAsset(BENCH_ZONES_ASSET, function (b, e2) { BENCH_OK = !e2 && !!b; });
+  });
 }
-function benchReady() { return hasAsset(BENCH_STATS_ASSET) && hasAsset(BENCH_ZONES_ASSET); }
+function benchReady() { return BENCH_OK; }
 function benchZoneLayer(y, ids, cls) {
   return benchReady() ? ee.Image(BENCH_ZONES_ASSET).select('c' + y).visualize({min: 0, max: 4, palette: BM_PAL})
                       : zoneImage().remap(ids, cls).visualize({min: 0, max: 4, palette: BM_PAL});
@@ -2433,10 +2436,10 @@ function start(found) {
     if (EXPORT_BENCH) exportBenchAssets();
   });
 }
+checkBenchAssets();
 ee.data.listAssets(ASSET_FOLDER.replace(/\/$/, ''), {}, function (res, err) {
   if (err || !res) { start(ALL_YEARS); return; }
   var names = (res.assets || []).map(function (a) { return a.name || a.id || ''; });
-  ASSET_NAMES = names;
   start(ALL_YEARS.filter(function (y) {
     return names.some(function (n) { return n.slice(-('lahore_v7_' + y).length) === 'lahore_v7_' + y; });
   }));
