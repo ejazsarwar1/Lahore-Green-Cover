@@ -1305,6 +1305,38 @@ var SAVED_CHECKS = [
   ['D1', 'INFO', 'Diagnostic only (spread between the three tree models)'],
   ['D2', 'INFO', 'Green area follows rainfall (r = 0.62): part of the year-to-year change is weather']
 ];
+var SAVED_AREAS = [   // [year, trees, grass] in km2 from the last full run; 2026 provisional
+  [2019, 62.92, 213.66], [2020, 67.24, 219.62], [2021, 73.45, 227.47], [2022, 76.85, 231.89],
+  [2023, 74.04, 230.18], [2024, 68.82, 226.95], [2025, 69.81, 242.08], [2026, 70.99, 249.93]];
+var SAVED_SEN = 5.01;   // km2 per year, total non-crop green 2019-2025 (95% CI -1.72 to +10.95)
+function savedTrendChart() {
+  var t0 = SAVED_AREAS[0][0], complete = SAVED_AREAS.filter(function (a) { return !isProvisional(a[0]); });
+  var resid = complete.map(function (a) { return a[1] + a[2] - SAVED_SEN * (a[0] - t0); }).sort(function (a, b) {
+    return a - b; });
+  var mid = Math.floor(resid.length / 2);
+  var b = resid.length % 2 ? resid[mid] : (resid[mid - 1] + resid[mid]) / 2;   // Sen intercept: median residual
+  var rows = [['Year', 'Total non-crop green', 'Grass, lawns, parks', 'Tree cover',
+               'Trend 2019\u20132025 (Sen\u2019s slope)']];
+  SAVED_AREAS.forEach(function (a) {
+    rows.push([String(a[0]) + (isProvisional(a[0]) ? '*' : ''), a[1] + a[2], a[2], a[1],
+               isProvisional(a[0]) ? null : Math.round((b + SAVED_SEN * (a[0] - t0)) * 10) / 10]);
+  });
+  return ui.Chart(rows, 'LineChart', {
+    title: 'Non-crop green area (km\u00b2) \u00b7 trend +' + SAVED_SEN.toFixed(1) +
+      ' km\u00b2/yr, not yet statistically significant \u00b7 2026* provisional',
+    titleTextStyle: {fontSize: 12, bold: false, color: '#444'},
+    colors: ['#1b7837', '#93c02c', '#0b5a2a', '#888888'],
+    series: {0: {lineWidth: 3, pointSize: 6}, 1: {lineWidth: 2, pointSize: 4}, 2: {lineWidth: 2, pointSize: 4},
+             3: {lineWidth: 2, pointSize: 0, lineDashStyle: [6, 4]}},
+    vAxis: {title: 'km\u00b2', viewWindow: {min: 0}, gridlines: {color: '#eee'}},
+    hAxis: {textStyle: {fontSize: 11}},
+    legend: {position: 'bottom', textStyle: {fontSize: 11}},
+    chartArea: {left: 55, right: 15, top: 40, bottom: 60},
+    height: 340,
+    interpolateNulls: false
+  });
+}
+
 function showSavedChecks() {
   SAVED_CHECKS.forEach(function (c) { setRow(c[0], c[1], c[2]); });
   verdict.setValue('Verdict: PARTLY SUPPORTED – warnings on C3 and C7 (C9 shows the trend is not yet ' +
@@ -1333,13 +1365,18 @@ function methodsPanel() {
     'samples, held-out OSM parks, land that cannot change – and two fully independent sources: NASA’s GEDI ' +
     'space laser and Google Open Buildings. Without field visits the best possible verdict is "well-supported", ' +
     'not "field-verified".' + (PUBLIC_MODE ? '' : ' Running all checks takes about 3–10 minutes.'), PARA));
+  verdict.style().set({backgroundColor: '#fff6e5', border: '1px solid #f0d9a8', padding: '8px 10px'});
+  p.add(verdict);
   if (PUBLIC_MODE) {
     p.add(ui.Label('Results of the last full run (October 2026):', PARA));
   } else {
     p.add(ui.Button({label: 'Run all checks', onClick: runAll}));
   }
   p.add(scorePanel);
-  p.add(verdict);
+  if (PUBLIC_MODE) {
+    p.add(ui.Label('Year by year', HEADING));
+    p.add(savedTrendChart());
+  }
   p.add(detailHolder);
   if (PUBLIC_MODE) showSavedChecks();
   return p;
