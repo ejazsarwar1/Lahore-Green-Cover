@@ -880,8 +880,13 @@ var titleLabel = ui.Label('Lahore Non-Crop Green Cover, 2019–2026', {fontWeigh
   color: '#ffffff', backgroundColor: COL.dark, margin: '8px 8px 0 8px', textAlign: 'center', stretch: 'horizontal'});
 var subtitleLabel = ui.Label('Trees, grass, lawns and parks mapped from space every year · crops excluded · ' +
   'Sentinel-2 satellite images, 10 m', {fontSize: '13px', color: '#d9f0d3', backgroundColor: COL.dark,
-  margin: '4px 8px 8px 8px', textAlign: 'center', stretch: 'horizontal'});
-var header = ui.Panel([titleLabel, subtitleLabel], null,
+  margin: '4px 8px 2px 8px', textAlign: 'center', stretch: 'horizontal'});
+// author byline, linked to the project on GitHub
+var bylineLabel = ui.Label('\u2014  \ud83c\udf3f  A satellite study by Muhammad Ejaz Sarwar (PAS)  \ud83c\udf3f  \u2014',
+  {fontSize: '12px', fontStyle: 'italic', color: '#a6dba0', backgroundColor: COL.dark,
+   margin: '2px 8px 8px 8px', textAlign: 'center', stretch: 'horizontal'},
+  'https://github.com/ejazsarwar1/Lahore-Green-Cover');
+var header = ui.Panel([titleLabel, subtitleLabel, bylineLabel], null,
   {stretch: 'horizontal', backgroundColor: COL.dark, padding: '4px 0', margin: '0'});
 var status = ui.Label('Loading…', {fontSize: '12px', color: '#a15c00', margin: '4px 8px',
   textAlign: 'center', stretch: 'horizontal'});
@@ -1011,7 +1016,38 @@ var inspectLabel = ui.Label('Click the map to read values at a point.',
   {fontSize: '12px', color: '#333', margin: '8px 0', whiteSpace: 'pre-wrap'});
 var sidePanel = ui.Panel([sideTitle, cardsBox, cardsNote, changeNote, inspectLabel], null,
   {width: '270px', margin: '0 8px 0 0', padding: '0'});
-var mapColumn = ui.Panel([map, legendBelow], null, {stretch: 'horizontal', margin: '0', padding: '0'});
+var loadText = ui.Label('', {fontSize: '12px', fontWeight: 'bold', color: COL.green, margin: '2px 0 3px 0'});
+var loadFill = ui.Label('', {backgroundColor: COL.green, height: '6px', width: '0%', margin: '0', padding: '0'});
+var loadTrack = ui.Panel([loadFill], null, {backgroundColor: '#dcebd8', height: '6px', stretch: 'horizontal',
+  margin: '0', padding: '0'});
+var loadBar = ui.Panel([loadText, loadTrack], null, {stretch: 'horizontal', margin: '0 8px 6px 8px', padding: '0',
+  shown: false});
+var LOAD = {id: 0, pct: 0};
+function showLoad(msg, pct) {
+  loadText.setValue(msg + '\u2026 ' + Math.floor(pct) + '%');
+  loadFill.style().set('width', pct.toFixed(1) + '%');
+}
+function startLoading(msg, expectSec) {
+  var id = ++LOAD.id;
+  LOAD.pct = 0;
+  loadBar.style().set('shown', true);
+  var k = 1 - Math.exp(-0.25 * 3 / (expectSec || 8));   // about 95% after the expected time
+  var tick = function () {
+    if (id !== LOAD.id) return;
+    LOAD.pct += (95 - LOAD.pct) * k;
+    showLoad(msg, LOAD.pct);
+    ui.util.setTimeout(tick, 250);
+  };
+  tick();
+  return id;
+}
+function finishLoading() {
+  var id = ++LOAD.id;   // stops the running ticker
+  loadText.setValue('Loaded 100%');
+  loadFill.style().set('width', '100%');
+  ui.util.setTimeout(function () { if (id === LOAD.id) loadBar.style().set('shown', false); }, 700);
+}
+var mapColumn = ui.Panel([loadBar, map, legendBelow], null, {stretch: 'horizontal', margin: '0', padding: '0'});
 var mapRow = ui.Panel([mapColumn, sidePanel], ui.Panel.Layout.flow('horizontal'),
   {stretch: 'horizontal', margin: '0', padding: '0'});
 function isWholeCity() { return !areaSelect.getValue() || areaSelect.getValue() === 'All of Lahore'; }
@@ -1207,11 +1243,13 @@ function layersFor(y) {
 var statsRequest = 0;
 function updateCards(y) {
   var id = ++statsRequest;
+  startLoading('Loading the ' + y + ' map', 8);
   [cTrees, cGrass, cTotal, cShare].forEach(function (c) { c.num.setValue('…'); });
   ee.Image.cat([treeAreaImg(y), grassAreaImg(y), AREA.rename('all')]).clip(geom)
     .reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE, maxPixels: 1e11, tileScale: 4})
     .evaluate(function (r, err) {
       if (id !== statsRequest) return;
+      finishLoading();
       if (err) { cTotal.num.setValue('error'); setStatus('Error: ' + err); return; }
       var t = r.trees || 0, g = r.grass || 0;
       cTrees.num.setValue(fmt(t, 1) + ' km²');
@@ -1245,6 +1283,7 @@ function renderChange() {
     'statistically established.');
   [dTotal, dTrees, dGrass, dSplit].forEach(function (c) { c.num.setValue('…'); });
   var id = ++statsRequest;
+  startLoading('Loading the change map', 10);
   var dT = treeAreaImg(y1).subtract(treeAreaImg(y0)), dG = grassAreaImg(y1).subtract(grassAreaImg(y0));
   var d = dT.add(dG).divide(AREA);
   ee.Image.cat([treeAreaImg(y0).rename('t0'), grassAreaImg(y0).rename('g0'), dT.rename('dT'), dG.rename('dG'),
@@ -1252,6 +1291,7 @@ function renderChange() {
     .clip(geom).reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE, maxPixels: 1e11, tileScale: 4})
     .evaluate(function (r, err) {
       if (id !== statsRequest) return;
+      finishLoading();
       if (err) { dTotal.num.setValue('error'); setStatus('Error: ' + err); return; }
       var sign = function (x) { return (x >= 0 ? '+' : '') + fmt(x, 1); };
       var pct = function (x, base) { return base ? ' (' + (x >= 0 ? '+' : '') + fmt(100 * x / base, 0) + '%)' : ''; };
@@ -1593,7 +1633,8 @@ function renderBenchmarks() {
   yearBadge.setValue(y + (isProvisional(y) ? ' (provisional)' : ''));
   sideTitle.setValue('Lahore vs benchmarks, ' + y);
   showLegend(bmLegend());
-  if (BM_CACHE[y]) { showBenchmarks(y, BM_CACHE[y]); return; }
+  if (BM_CACHE[y]) { showBenchmarks(y, BM_CACHE[y]); finishLoading(); return; }
+  startLoading('Loading the benchmarks', benchReady() ? 4 : 40);
   BM_ZONES = null;
   var first = benchReady() ? [ui.Map.Layer(benchZoneLayer(y), {}, 'Tree canopy by neighbourhood ' + y, true, 0.8)] : [];
   map.layers().reset(first.concat([ui.Map.Layer(PARKS.style({color: '1b7837', fillColor: '00000000', width: 1}), {},
@@ -1602,6 +1643,7 @@ function renderBenchmarks() {
   if (benchReady()) {
     bmList.setValue('Loading\u2026');
     ee.FeatureCollection(BENCH_STATS_ASSET).filter(ee.Filter.eq('year', y)).evaluate(function (fc, err) {
+      finishLoading();
       if (err) { bmList.setValue('Error: ' + err); return; }
       var r = {tot: null, zones: []};
       fc.features.forEach(function (f) {
@@ -1623,6 +1665,7 @@ function renderBenchmarks() {
     .reduceRegion({reducer: ee.Reducer.sum().repeat(4).group({groupField: 4, groupName: 'zone'}),
       geometry: geom, scale: STAT_SCALE, maxPixels: 1e11, tileScale: 8});
   ee.Dictionary({tot: tot, zones: zones.get('groups')}).evaluate(function (r, err) {
+    finishLoading();
     if (err) { bmList.setValue('Error: ' + err); return; }
     BM_CACHE[y] = r;
     if (mode === 'bench' && Number(bmYear.getValue()) === y) showBenchmarks(y, r);
@@ -1699,6 +1742,7 @@ function applyLayout(isPhone) {
     layerList: !isPhone, fullscreenControl: !isPhone, drawingToolsControl: false});
   titleLabel.style().set('fontSize', isPhone ? '17px' : '22px');
   subtitleLabel.style().set('fontSize', isPhone ? '11px' : '13px');
+  bylineLabel.style().set('fontSize', isPhone ? '11px' : '12px');
   navLabels.forEach(function (l) { l.style().set('width', isPhone ? '84px' : '110px'); });
   // phones: map on top, statistics below it two per row; desktop: statistics in a column on the right
   mapRow.setLayout(ui.Panel.Layout.flow(isPhone ? 'vertical' : 'horizontal'));
