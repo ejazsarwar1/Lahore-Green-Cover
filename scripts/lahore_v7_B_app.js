@@ -861,10 +861,6 @@ function pctTxt(x) { return (x >= 0 ? '+' : '') + fmt(x, 0) + '%'; }
 // ---------------------------------------------------------------------
 // 5. LAYOUT: header band, navigation panel, one content area per tab
 // ---------------------------------------------------------------------
-// After publishing the polished timelapse GIF (e.g. on GitHub), paste its
-// direct image link here and the Timelapse page will show it:
-var TIMELAPSE_GIF_URL = 'https://cdn.jsdelivr.net/gh/ejazsarwar1/Lahore-Green-Cover@main/graphics/lahore_green_timelapse_app.gif';
-var TIMELAPSE_FULL_URL = 'https://github.com/ejazsarwar1/Lahore-Green-Cover/blob/main/graphics/lahore_green_timelapse.gif';
 
 var COL = {dark: '#14532d', green: '#1b7837', light: '#eef5ec', line: '#cfe3cb', ink: '#212529',
            muted: '#5f6b66', red: '#b2182b'};
@@ -908,10 +904,14 @@ function setChip(c, on) {
   c.btn.style().set({fontWeight: on ? 'bold' : 'normal', color: on ? COL.green : COL.ink});
 }
 var navLabels = [];
-function navLabel(text) {
-  var l = ui.Label(text, {width: IS_PHONE ? '92%' : '110px', margin: IS_PHONE ? '8px 4px 2px 10px' : '11px 4px 0 12px',
-    fontWeight: 'bold', fontSize: '13px', color: COL.dark, backgroundColor: COL.light});
-  navLabels.push(l);
+// phones: each row's name sits on its own line above its buttons; desktop: a fixed column (wider if 'wide')
+function navLabelStyle(wide, isPhone) {
+  return {width: isPhone ? '92%' : (wide ? '180px' : '110px'), margin: isPhone ? '8px 4px 2px 10px' : '11px 4px 0 12px'};
+}
+function navLabel(text, wide) {
+  var l = ui.Label(text, {fontWeight: 'bold', fontSize: '13px', color: COL.dark, backgroundColor: COL.light});
+  l.style().set(navLabelStyle(wide, IS_PHONE));
+  navLabels.push({label: l, wide: !!wide});
   return l;
 }
 // A layout object can belong to only one panel, so every row gets its own.
@@ -931,7 +931,7 @@ var benchChip = chip('Lahore vs Benchmarks', function () { setMode('bench'); });
 var howChip = chip('How We Know', function () { setMode('methods'); });
 var aboutChip = chip('About & Data', function () { setMode('about'); });
 var exploreRow = navRow([navLabel('Explore'), changeChip.wrap, timelapseChip.wrap, benchChip.wrap]);
-var zoomRow = navRow([navLabel('Zoom to'), areaSelect]);
+var zoomRow = navRow([navLabel('Zoom to neighbourhood', true), areaSelect]);
 var learnRow = navRow([navLabel('Learn more'), howChip.wrap, aboutChip.wrap]);
 var nav = ui.Panel([yearRow, exploreRow, zoomRow, learnRow], null, {backgroundColor: COL.light, stretch: 'horizontal',
   margin: '0 0 6px 0', padding: '4px 0', border: '1px solid ' + COL.line});
@@ -1056,7 +1056,7 @@ function updateCardVisibility() {
 
 // --- Timelapse page
 var gifHolder = ui.Panel();
-var gifButton = ui.Button({label: 'Build the timelapse in this app', onClick: function () { makeTimelapse(); }});
+var gifButton = ui.Button({label: '▶ Play the timelapse', onClick: function () { makeTimelapse(); }});
 
 // --- How We Know (verification) widgets
 var CHECKS = [
@@ -1310,13 +1310,8 @@ function timelapsePanel() {
   var p = ui.Panel(null, null, {margin: '4px 8px'});
   TIMELAPSE_PANEL = p;
   p.add(ui.Label('Timelapse: Lahore\u2019s green cover, 2019\u20132026', HEADING));
-  // Earth Engine does not show images from outside links, so the finished GIF opens in a new tab and the
-  // in-app animation is built on request; both sit at the top so they are visible without scrolling.
-  if (TIMELAPSE_FULL_URL) {
-    p.add(ui.Label('\u25b6 Watch the timelapse (opens in a new tab)', {fontSize: '15px', fontWeight: 'bold',
-      color: COL.green, margin: '6px 8px'}, TIMELAPSE_FULL_URL));
-  }
-  p.add(ui.Panel([gifButton, ui.Label('or build it here from the map data (about 1\u20132 minutes)',
+  // the animation is built on request, with the button at the top so it is visible without scrolling
+  p.add(ui.Panel([gifButton, ui.Label('takes about 1\u20132 minutes to build',
     {fontSize: '12px', color: '#555', margin: '13px 4px 0 4px'})], wrapRow(), {margin: '0 4px'}));
   p.add(gifHolder);
   p.add(ui.Label('2026* is provisional: the year is not complete yet. Numbers in the animation are the ' +
@@ -1740,10 +1735,7 @@ function applyLayout(isPhone) {
   titleLabel.style().set('fontSize', isPhone ? '17px' : '22px');
   subtitleLabel.style().set('fontSize', isPhone ? '11px' : '13px');
   bylineLabel.style().set('fontSize', isPhone ? '11px' : '12px');
-  // phones: each row's name sits on its own line above its buttons, so nothing wraps under a half-empty label
-  navLabels.forEach(function (l) {
-    l.style().set({width: isPhone ? '92%' : '110px', margin: isPhone ? '8px 4px 2px 10px' : '11px 4px 0 12px'});
-  });
+  navLabels.forEach(function (n) { n.label.style().set(navLabelStyle(n.wide, isPhone)); });
   // phones: map on top, statistics below it two per row; desktop: statistics in a column on the right
   mapRow.setLayout(ui.Panel.Layout.flow(isPhone ? 'vertical' : 'horizontal'));
   sidePanel.style().set({width: isPhone ? 'auto' : '270px', stretch: isPhone ? 'horizontal' : 'vertical',
