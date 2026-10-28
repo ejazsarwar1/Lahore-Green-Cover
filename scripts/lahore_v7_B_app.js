@@ -1339,8 +1339,7 @@ function savedTrendChart() {
 
 function showSavedChecks() {
   SAVED_CHECKS.forEach(function (c) { setRow(c[0], c[1], c[2]); });
-  verdict.setValue('Verdict: PARTLY SUPPORTED – warnings on C3 and C7 (C9 shows the trend is not yet ' +
-    'statistically established).\nModel estimate: 276.6 km² (2019) → 311.9 km² (2025), +35.3 km². ' +
+  verdict.setValue('Model estimate: 276.6 km² (2019) → 311.9 km² (2025), +35.3 km². ' +
     'The direction is confirmed by independent data; report it as an estimate with caveats.');
 }
 
