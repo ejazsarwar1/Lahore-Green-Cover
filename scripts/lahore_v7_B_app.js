@@ -909,8 +909,8 @@ function setChip(c, on) {
 }
 var navLabels = [];
 function navLabel(text) {
-  var l = ui.Label(text, {width: '110px', margin: '11px 4px 0 12px', fontWeight: 'bold', fontSize: '13px',
-    color: COL.dark, backgroundColor: COL.light});
+  var l = ui.Label(text, {width: IS_PHONE ? '92%' : '110px', margin: IS_PHONE ? '8px 4px 2px 10px' : '11px 4px 0 12px',
+    fontWeight: 'bold', fontSize: '13px', color: COL.dark, backgroundColor: COL.light});
   navLabels.push(l);
   return l;
 }
@@ -930,11 +930,10 @@ var timelapseChip = chip('Timelapse', function () { setMode('timelapse'); });
 var benchChip = chip('Lahore vs Benchmarks', function () { setMode('bench'); });
 var howChip = chip('How We Know', function () { setMode('methods'); });
 var aboutChip = chip('About & Data', function () { setMode('about'); });
-var exploreRow = navRow([navLabel('Explore'), changeChip.wrap, timelapseChip.wrap, benchChip.wrap,
-  ui.Label('Zoom to neighbourhood:', {margin: '11px 4px 0 24px', fontSize: '13px', color: COL.dark,
-    backgroundColor: COL.light}), areaSelect]);
+var exploreRow = navRow([navLabel('Explore'), changeChip.wrap, timelapseChip.wrap, benchChip.wrap]);
+var zoomRow = navRow([navLabel('Zoom to'), areaSelect]);
 var learnRow = navRow([navLabel('Learn more'), howChip.wrap, aboutChip.wrap]);
-var nav = ui.Panel([yearRow, exploreRow, learnRow], null, {backgroundColor: COL.light, stretch: 'horizontal',
+var nav = ui.Panel([yearRow, exploreRow, zoomRow, learnRow], null, {backgroundColor: COL.light, stretch: 'horizontal',
   margin: '0 0 6px 0', padding: '4px 0', border: '1px solid ' + COL.line});
 
 function styleNav() {
@@ -1089,7 +1088,6 @@ CHECKS.forEach(function (c) {
 var verdict = ui.Label('Verdict: not yet assessed.', {fontSize: '14px', fontWeight: 'bold',
   margin: '6px 8px', whiteSpace: 'pre-wrap'});
 var detailHolder = ui.Panel();
-var exportMsg = ui.Label('', SMALL);
 
 var content = ui.Panel(null, ui.Panel.Layout.flow('vertical'), {stretch: 'horizontal'});
 var main = ui.Panel([header, status, nav, content], ui.Panel.Layout.flow('vertical'),
@@ -1188,6 +1186,7 @@ function setMode(m) {
     content.add(m === 'year' ? controlsRow([ctrlLabel('Map view:'), viewSelect, contextBox])
                              : controlsRow([ctrlLabel('Compare'), chFrom, ctrlLabel('with'), chTo, contextBox]));
     content.add(mapRow);
+    if (m === 'change') content.add(trendPanel());
     if (m === 'year') renderYear(selectedYear); else renderChange();
   } else if (m === 'bench') {
     cardsBox.clear();
@@ -1376,6 +1375,14 @@ function savedTrendChart() {
   });
 }
 
+// Year-by-year chart under the change map (saved figures, so it costs no computing)
+var TREND_PANEL = null;
+function trendPanel() {
+  if (TREND_PANEL) return TREND_PANEL;
+  TREND_PANEL = ui.Panel([ui.Label('Year by year', HEADING), savedTrendChart()], null, {margin: '4px 8px'});
+  return TREND_PANEL;
+}
+
 function showSavedChecks() {
   SAVED_CHECKS.forEach(function (c) { setRow(c[0], c[1], c[2]); });
   verdict.setValue('Model estimate: 276.6 km² (2019) → 311.9 km² (2025), +35.3 km². ' +
@@ -1411,10 +1418,6 @@ function methodsPanel() {
     p.add(ui.Button({label: 'Run all checks', onClick: runAll}));
   }
   p.add(scorePanel);
-  if (PUBLIC_MODE) {
-    p.add(ui.Label('Year by year', HEADING));
-    p.add(savedTrendChart());
-  }
   p.add(detailHolder);
   if (PUBLIC_MODE) showSavedChecks();
   return p;
@@ -1449,10 +1452,6 @@ function aboutPanel() {
     '• NASA GEDI canopy heights, Google Open Buildings 2.5D Temporal (independent checks)\n' +
     '• JRC Global Surface Water, GHSL population, CHIRPS rainfall\n' +
     '• District boundary: geoBoundaries', PARA));
-  p.add(ui.Label('Download the data', HEADING));
-  p.add(ui.Label('Exports the selected year as a GeoTIFF to your own Google Drive (requires an Earth Engine account).', SMALL));
-  p.add(ui.Button({label: 'Export the selected year', onClick: exportYear}));
-  p.add(exportMsg);
   return p;
 }
 
@@ -1741,7 +1740,10 @@ function applyLayout(isPhone) {
   titleLabel.style().set('fontSize', isPhone ? '17px' : '22px');
   subtitleLabel.style().set('fontSize', isPhone ? '11px' : '13px');
   bylineLabel.style().set('fontSize', isPhone ? '11px' : '12px');
-  navLabels.forEach(function (l) { l.style().set('width', isPhone ? '84px' : '110px'); });
+  // phones: each row's name sits on its own line above its buttons, so nothing wraps under a half-empty label
+  navLabels.forEach(function (l) {
+    l.style().set({width: isPhone ? '92%' : '110px', margin: isPhone ? '8px 4px 2px 10px' : '11px 4px 0 12px'});
+  });
   // phones: map on top, statistics below it two per row; desktop: statistics in a column on the right
   mapRow.setLayout(ui.Panel.Layout.flow(isPhone ? 'vertical' : 'horizontal'));
   sidePanel.style().set({width: isPhone ? 'auto' : '270px', stretch: isPhone ? 'horizontal' : 'vertical',
@@ -2349,19 +2351,10 @@ function makeTimelapse() {
     for (var k = 0; k < GIF_SECONDS_PER_YEAR; k++) frames.push(frame);
   });
   gifHolder.clear();
+  var size = IS_PHONE ? 330 : 640;   // fits a phone screen without cropping
   gifHolder.add(ui.Thumbnail({image: ee.ImageCollection(frames),
-    params: {region: GIF_REGION, dimensions: 640, framesPerSecond: 1, crs: 'EPSG:3857'}, style: {width: '640px'}}));
-  gifHolder.add(ui.Label('Right-click the animation to save it as a GIF.', SMALL));
-}
-function exportYear() {
-  if (!selectedYear) return;
-  var y = selectedYear;
-  Export.image.toDrive({image: treeFrac(y).multiply(100).rename('tree_pct')
-      .addBands(grassFrac(y).multiply(100).rename('grass_pct')).toByte(),
-    description: 'lahore_green_v7_' + y, folder: FOLDER, region: geom, scale: 10, maxPixels: 1e11,
-    formatOptions: {cloudOptimized: true}});
-  exportMsg.setValue('Task created for ' + y + '. Bands: tree_pct (0–100 % tree cover per 10 m pixel), ' +
-    'grass_pct (0–100 % grass/lawn/park per pixel). Open Tasks and click RUN.');
+    params: {region: GIF_REGION, dimensions: size, framesPerSecond: 1, crs: 'EPSG:3857'}, style: {width: size + 'px'}}));
+  gifHolder.add(ui.Label((IS_PHONE ? 'Press and hold' : 'Right-click') + ' the animation to save it as a GIF.', SMALL));
 }
 
 // ---------------------------------------------------------------------
