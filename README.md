@@ -4,7 +4,7 @@
 
 ![Timelapse of Lahore's non-crop green cover, 2019–2026](graphics/lahore_green_timelapse.gif)
 
-**▶ [Open the interactive app](https://lahore-green-cover-2000-2026.projects.earthengine.app/view/lahore-green-cover-2019-2026)**: yearly maps, change maps, neighbourhood benchmarks and the verification results. It works on phones too.
+**▶ [Open the interactive app](https://lahore-green-cover-2000-2026.projects.earthengine.app/view/lahore-green-cover)**: yearly maps, change maps, neighbourhood benchmarks and the verification results. It works on phones too.
 
 ---
 
