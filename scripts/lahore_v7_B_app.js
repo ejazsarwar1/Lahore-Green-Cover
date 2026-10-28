@@ -1016,38 +1016,36 @@ var inspectLabel = ui.Label('Click the map to read values at a point.',
   {fontSize: '12px', color: '#333', margin: '8px 0', whiteSpace: 'pre-wrap'});
 var sidePanel = ui.Panel([sideTitle, cardsBox, cardsNote, changeNote, inspectLabel], null,
   {width: '270px', margin: '0 8px 0 0', padding: '0'});
-var loadText = ui.Label('', {fontSize: '12px', fontWeight: 'bold', color: COL.green, margin: '2px 0 3px 0'});
-var loadFill = ui.Label('', {backgroundColor: COL.green, height: '6px', width: '0%', margin: '0', padding: '0'});
-var loadTrack = ui.Panel([loadFill], null, {backgroundColor: '#dcebd8', height: '6px', stretch: 'horizontal',
+// Loading indicator floating on the map (it never moves the layout). Earth Engine does not report tile
+// progress, so it takes three quick steps on a timer and shows 100% when the view's data arrives. It only
+// changes a few labels, so the map and the numbers load exactly as fast as without it.
+var loadText = ui.Label('', {fontSize: '12px', fontWeight: 'bold', color: COL.green, margin: '0 0 3px 0',
+  backgroundColor: CLEAR});
+var loadFill = ui.Label('', {backgroundColor: COL.green, height: '5px', width: '0%', margin: '0', padding: '0'});
+var loadTrack = ui.Panel([loadFill], null, {backgroundColor: '#dcebd8', height: '5px', width: '180px',
   margin: '0', padding: '0'});
-var loadBar = ui.Panel([loadText, loadTrack], null, {stretch: 'horizontal', margin: '0 8px 6px 8px', padding: '0',
-  shown: false});
-var LOAD = {id: 0, pct: 0};
+var loadBar = ui.Panel([loadText, loadTrack], null, {position: 'top-center', padding: '6px 10px', shown: false,
+  backgroundColor: 'rgba(255,255,255,0.92)'});
+map.add(loadBar);
+var LOAD = {id: 0};
 function showLoad(msg, pct) {
-  loadText.setValue(msg + '\u2026 ' + Math.floor(pct) + '%');
-  loadFill.style().set('width', pct.toFixed(1) + '%');
+  loadText.setValue(msg + '\u2026 ' + pct + '%');
+  loadFill.style().set('width', pct + '%');
 }
-function startLoading(msg, expectSec) {
+function startLoading(msg) {
   var id = ++LOAD.id;
-  LOAD.pct = 0;
+  showLoad(msg, 25);
   loadBar.style().set('shown', true);
-  var k = 1 - Math.exp(-0.25 * 3 / (expectSec || 8));   // about 95% after the expected time
-  var tick = function () {
-    if (id !== LOAD.id) return;
-    LOAD.pct += (95 - LOAD.pct) * k;
-    showLoad(msg, LOAD.pct);
-    ui.util.setTimeout(tick, 250);
-  };
-  tick();
+  [[1200, 60], [3000, 85]].forEach(function (step) {
+    ui.util.setTimeout(function () { if (id === LOAD.id) showLoad(msg, step[1]); }, step[0]);
+  });
   return id;
 }
 function finishLoading() {
-  var id = ++LOAD.id;   // stops the running ticker
-  loadText.setValue('Loaded 100%');
-  loadFill.style().set('width', '100%');
-  ui.util.setTimeout(function () { if (id === LOAD.id) loadBar.style().set('shown', false); }, 700);
+  ++LOAD.id;   // cancels the remaining steps
+  loadBar.style().set('shown', false);
 }
-var mapColumn = ui.Panel([loadBar, map, legendBelow], null, {stretch: 'horizontal', margin: '0', padding: '0'});
+var mapColumn = ui.Panel([map, legendBelow], null, {stretch: 'horizontal', margin: '0', padding: '0'});
 var mapRow = ui.Panel([mapColumn, sidePanel], ui.Panel.Layout.flow('horizontal'),
   {stretch: 'horizontal', margin: '0', padding: '0'});
 function isWholeCity() { return !areaSelect.getValue() || areaSelect.getValue() === 'All of Lahore'; }
@@ -1243,7 +1241,7 @@ function layersFor(y) {
 var statsRequest = 0;
 function updateCards(y) {
   var id = ++statsRequest;
-  startLoading('Loading the ' + y + ' map', 8);
+  startLoading('Loading the ' + y + ' map');
   [cTrees, cGrass, cTotal, cShare].forEach(function (c) { c.num.setValue('…'); });
   ee.Image.cat([treeAreaImg(y), grassAreaImg(y), AREA.rename('all')]).clip(geom)
     .reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE, maxPixels: 1e11, tileScale: 4})
@@ -1283,7 +1281,7 @@ function renderChange() {
     'statistically established.');
   [dTotal, dTrees, dGrass, dSplit].forEach(function (c) { c.num.setValue('…'); });
   var id = ++statsRequest;
-  startLoading('Loading the change map', 10);
+  startLoading('Loading the change map');
   var dT = treeAreaImg(y1).subtract(treeAreaImg(y0)), dG = grassAreaImg(y1).subtract(grassAreaImg(y0));
   var d = dT.add(dG).divide(AREA);
   ee.Image.cat([treeAreaImg(y0).rename('t0'), grassAreaImg(y0).rename('g0'), dT.rename('dT'), dG.rename('dG'),
@@ -1634,7 +1632,7 @@ function renderBenchmarks() {
   sideTitle.setValue('Lahore vs benchmarks, ' + y);
   showLegend(bmLegend());
   if (BM_CACHE[y]) { showBenchmarks(y, BM_CACHE[y]); finishLoading(); return; }
-  startLoading('Loading the benchmarks', benchReady() ? 4 : 40);
+  startLoading('Loading the benchmarks');
   BM_ZONES = null;
   var first = benchReady() ? [ui.Map.Layer(benchZoneLayer(y), {}, 'Tree canopy by neighbourhood ' + y, true, 0.8)] : [];
   map.layers().reset(first.concat([ui.Map.Layer(PARKS.style({color: '1b7837', fillColor: '00000000', width: 1}), {},
