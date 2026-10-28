@@ -865,7 +865,6 @@ function pctTxt(x) { return (x >= 0 ? '+' : '') + fmt(x, 0) + '%'; }
 // direct image link here and the Timelapse page will show it:
 var TIMELAPSE_GIF_URL = 'https://cdn.jsdelivr.net/gh/ejazsarwar1/Lahore-Green-Cover@main/graphics/lahore_green_timelapse_app.gif';
 var TIMELAPSE_FULL_URL = 'https://github.com/ejazsarwar1/Lahore-Green-Cover/blob/main/graphics/lahore_green_timelapse.gif';
-var TIMELAPSE_SIZE = [420, 525];   // pixel size of the app copy of the GIF
 
 var COL = {dark: '#14532d', green: '#1b7837', light: '#eef5ec', line: '#cfe3cb', ink: '#212529',
            muted: '#5f6b66', red: '#b2182b'};
@@ -1273,24 +1272,18 @@ function timelapsePanel() {
   if (TIMELAPSE_PANEL) return TIMELAPSE_PANEL;
   var p = ui.Panel(null, null, {margin: '4px 8px'});
   TIMELAPSE_PANEL = p;
-  p.add(ui.Label('Timelapse: Lahore’s green cover, 2019–2026', HEADING));
-  if (TIMELAPSE_GIF_URL) {
-    // an image label needs a fixed size, or it collapses to nothing
-    p.add(ui.Label('', {width: TIMELAPSE_SIZE[0] + 'px', height: TIMELAPSE_SIZE[1] + 'px', margin: '4px 8px',
-      padding: '0'}, TIMELAPSE_FULL_URL, TIMELAPSE_GIF_URL));
-    p.add(ui.Label('Open the full-size animation \u2197', {fontSize: '13px', color: COL.green, margin: '2px 8px'},
-      TIMELAPSE_FULL_URL));
-    p.add(ui.Label('If the animation does not appear, build it here from the map data (about 1\u20132 minutes):',
-      SMALL));
-    p.add(gifButton);
-    p.add(gifHolder);
-  } else {
-    p.add(ui.Label('Builds an animation of every year straight from the map data (about 1–2 minutes).', PARA));
-    p.add(gifButton);
-    p.add(gifHolder);
+  p.add(ui.Label('Timelapse: Lahore\u2019s green cover, 2019\u20132026', HEADING));
+  // Earth Engine does not show images from outside links, so the finished GIF opens in a new tab and the
+  // in-app animation is built on request; both sit at the top so they are visible without scrolling.
+  if (TIMELAPSE_FULL_URL) {
+    p.add(ui.Label('\u25b6 Watch the timelapse (opens in a new tab)', {fontSize: '15px', fontWeight: 'bold',
+      color: COL.green, margin: '6px 8px'}, TIMELAPSE_FULL_URL));
   }
+  p.add(ui.Panel([gifButton, ui.Label('or build it here from the map data (about 1\u20132 minutes)',
+    {fontSize: '12px', color: '#555', margin: '13px 4px 0 4px'})], wrapRow(), {margin: '0 4px'}));
+  p.add(gifHolder);
   p.add(ui.Label('2026* is provisional: the year is not complete yet. Numbers in the animation are the ' +
-    'model’s own estimates.', SMALL));
+    'model\u2019s own estimates.', SMALL));
   return p;
 }
 
