@@ -44,7 +44,8 @@ var BUILDINGS_LAST = 2023;  // last year in the Open Buildings Temporal dataset
 var MAX_TREE_UNDER_GRASS = 0.3;
 var STAT_SCALE = 30;
 var PUBLIC_MODE = true;       // true: 'How We Know' shows the saved results of the last full run (no heavy re-run)
-var EXPORT_GRAPHICS = false;   // true: also print GRAPHICS_DATA to the Console for tools/build_visuals.py
+var EXPORT_GRAPHICS = false;
+var EXPORT_BENCH = false;     // true once: starts two export tasks that make the Benchmarks tab load fast   // true: also print GRAPHICS_DATA to the Console for tools/build_visuals.py
 var MAP_HEIGHT = '500px';
 var FOLDER = 'lahore_gee_v7';
 var BOUNDARY_ASSET = '';
@@ -862,7 +863,9 @@ function pctTxt(x) { return (x >= 0 ? '+' : '') + fmt(x, 0) + '%'; }
 // ---------------------------------------------------------------------
 // After publishing the polished timelapse GIF (e.g. on GitHub), paste its
 // direct image link here and the Timelapse page will show it:
-var TIMELAPSE_GIF_URL = 'https://raw.githubusercontent.com/ejazsarwar1/Lahore-Green-Cover/main/graphics/lahore_green_timelapse.gif';
+var TIMELAPSE_GIF_URL = 'https://cdn.jsdelivr.net/gh/ejazsarwar1/Lahore-Green-Cover@main/graphics/lahore_green_timelapse_app.gif';
+var TIMELAPSE_FULL_URL = 'https://github.com/ejazsarwar1/Lahore-Green-Cover/blob/main/graphics/lahore_green_timelapse.gif';
+var TIMELAPSE_SIZE = [420, 525];   // pixel size of the app copy of the GIF
 
 var COL = {dark: '#14532d', green: '#1b7837', light: '#eef5ec', line: '#cfe3cb', ink: '#212529',
            muted: '#5f6b66', red: '#b2182b'};
@@ -1272,8 +1275,15 @@ function timelapsePanel() {
   TIMELAPSE_PANEL = p;
   p.add(ui.Label('Timelapse: Lahore’s green cover, 2019–2026', HEADING));
   if (TIMELAPSE_GIF_URL) {
-    p.add(ui.Label('', {stretch: 'horizontal', maxWidth: '640px', margin: '4px 8px'}, TIMELAPSE_GIF_URL, TIMELAPSE_GIF_URL));
-    p.add(ui.Label('Tap or click the animation to open it full size.', SMALL));
+    // an image label needs a fixed size, or it collapses to nothing
+    p.add(ui.Label('', {width: TIMELAPSE_SIZE[0] + 'px', height: TIMELAPSE_SIZE[1] + 'px', margin: '4px 8px',
+      padding: '0'}, TIMELAPSE_FULL_URL, TIMELAPSE_GIF_URL));
+    p.add(ui.Label('Open the full-size animation \u2197', {fontSize: '13px', color: COL.green, margin: '2px 8px'},
+      TIMELAPSE_FULL_URL));
+    p.add(ui.Label('If the animation does not appear, build it here from the map data (about 1\u20132 minutes):',
+      SMALL));
+    p.add(gifButton);
+    p.add(gifHolder);
   } else {
     p.add(ui.Label('Builds an animation of every year straight from the map data (about 1–2 minutes).', PARA));
     p.add(gifButton);
@@ -1495,6 +1505,51 @@ function bmLegend() {
   return p;
 }
 
+// Precomputed once (EXPORT_BENCH): zone map with one canopy-class band per year, and a table of
+// per-zone and district totals. When both assets exist the tab loads in seconds; otherwise it computes live.
+var BENCH_STATS_ASSET = ASSET_FOLDER + 'lahore_bench_stats';
+var BENCH_ZONES_ASSET = ASSET_FOLDER + 'lahore_bench_zones';
+var ASSET_NAMES = [];
+function hasAsset(id) {
+  var tail = id.split('/').pop();
+  return ASSET_NAMES.some(function (n) { return n.slice(-tail.length - 1) === '/' + tail; });
+}
+function benchReady() { return hasAsset(BENCH_STATS_ASSET) && hasAsset(BENCH_ZONES_ASSET); }
+function benchZoneLayer(y, ids, cls) {
+  return benchReady() ? ee.Image(BENCH_ZONES_ASSET).select('c' + y).visualize({min: 0, max: 4, palette: BM_PAL})
+                      : zoneImage().remap(ids, cls).visualize({min: 0, max: 4, palette: BM_PAL});
+}
+
+function exportBenchAssets() {
+  var people = peopleImg(), near = people.multiply(nearParkImg()).rename('popNear');
+  var zone = zoneImage();
+  var here = ee.Geometry.Point([74.33, 31.55]);   // table rows need a geometry to be exported
+  var feats = ee.FeatureCollection([]);
+  var bands = [zone.rename('zone')];
+  YEARS.forEach(function (y) {
+    var stack = ee.Image.cat([treeAreaImg(y), greenAreaImg(y), AREA.rename('all'), people, near]).clip(geom);
+    var tot = stack.reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE,
+      maxPixels: 1e11, tileScale: 4});
+    var groups = ee.List(stack.select(['trees', 'green', 'all', 'pop']).addBands(zone)
+      .reduceRegion({reducer: ee.Reducer.sum().repeat(4).group({groupField: 4, groupName: 'zone'}),
+        geometry: geom, scale: STAT_SCALE, maxPixels: 1e11, tileScale: 8}).get('groups'));
+    var rows = ee.FeatureCollection(groups.map(function (g) {
+      g = ee.Dictionary(g);
+      var v = ee.List(g.get('sum'));
+      var pct = ee.Number(v.get(0)).divide(v.get(2)).multiply(100);
+      var cls = ee.List(BM_CLASSES).map(function (c) { return pct.gte(c); }).reduce(ee.Reducer.sum());
+      return ee.Feature(here, {year: y, zone: g.get('zone'), trees: v.get(0), green: v.get(1), all: v.get(2),
+        pop: v.get(3), cls: cls});
+    }));
+    feats = feats.merge(rows).merge(ee.FeatureCollection([ee.Feature(here, tot).set({year: y, zone: -1})]));
+    bands.push(zone.remap(rows.aggregate_array('zone'), rows.aggregate_array('cls')).rename('c' + y));
+  });
+  Export.table.toAsset({collection: feats, description: 'lahore_bench_stats', assetId: BENCH_STATS_ASSET});
+  Export.image.toAsset({image: ee.Image.cat(bands).toInt16(), description: 'lahore_bench_zones',
+    assetId: BENCH_ZONES_ASSET, region: geom.bounds(), scale: 60, crs: 'EPSG:4326', maxPixels: 1e10});
+  print('Benchmarks: open the Tasks tab and click RUN on lahore_bench_stats and lahore_bench_zones.');
+}
+
 var BM_CACHE = {};
 var BM_ZONES = null;
 function renderBenchmarks() {
@@ -1507,10 +1562,26 @@ function renderBenchmarks() {
   showLegend(bmLegend());
   if (BM_CACHE[y]) { showBenchmarks(y, BM_CACHE[y]); return; }
   BM_ZONES = null;
-  map.layers().reset([ui.Map.Layer(PARKS.style({color: '1b7837', fillColor: '00000000', width: 1}), {},
-    'Parks of 0.5 ha or more (OpenStreetMap)')].concat(contextLayers()));
-  [bCanopy, bPerRes, bPark, bZones].forEach(function (c) { c.num.setValue('…'); });
-  bmList.setValue('Calculating (about 30–60 s the first time)…');
+  var first = benchReady() ? [ui.Map.Layer(benchZoneLayer(y), {}, 'Tree canopy by neighbourhood ' + y, true, 0.8)] : [];
+  map.layers().reset(first.concat([ui.Map.Layer(PARKS.style({color: '1b7837', fillColor: '00000000', width: 1}), {},
+    'Parks of 0.5 ha or more (OpenStreetMap)')]).concat(contextLayers()));
+  [bCanopy, bPerRes, bPark, bZones].forEach(function (c) { c.num.setValue('\u2026'); });
+  if (benchReady()) {
+    bmList.setValue('Loading\u2026');
+    ee.FeatureCollection(BENCH_STATS_ASSET).filter(ee.Filter.eq('year', y)).evaluate(function (fc, err) {
+      if (err) { bmList.setValue('Error: ' + err); return; }
+      var r = {tot: null, zones: []};
+      fc.features.forEach(function (f) {
+        var q = f.properties;
+        if (q.zone === -1) r.tot = q;
+        else r.zones.push({zone: q.zone, sum: [q.trees, q.green, q.all, q.pop]});
+      });
+      BM_CACHE[y] = r;
+      if (mode === 'bench' && Number(bmYear.getValue()) === y) showBenchmarks(y, r);
+    });
+    return;
+  }
+  bmList.setValue('Calculating (about 30\u201360 s the first time)\u2026');
   var stack = ee.Image.cat([treeAreaImg(y), greenAreaImg(y), AREA.rename('all'), peopleImg(),
                             peopleImg().multiply(nearParkImg()).rename('popNear')]).clip(geom);
   var tot = stack.reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE,
@@ -1559,7 +1630,7 @@ function showBenchmarks(y, r) {
     '\n\nNeighbourhoods over 20,000 residents with less than 9 m² of green per resident: ' + lowGreen);
   var ids = groups.map(function (g) { return g.zone; });
   var cls = rows.map(function (z) { return bmClass(z.canopy); });
-  var zoneLayer = zoneImage().remap(ids, cls).visualize({min: 0, max: 4, palette: BM_PAL});
+  var zoneLayer = benchZoneLayer(y, ids, cls);
   map.layers().reset([ui.Map.Layer(zoneLayer, {}, 'Tree canopy by neighbourhood ' + y, true, 0.8),
     ui.Map.Layer(PARKS.style({color: '1b7837', fillColor: '00000000', width: 1}), {}, 'Parks of 0.5 ha or more'),
     ui.Map.Layer(nearParkImg().selfMask(), {palette: ['#1b7837']}, 'Within 300 m of a park', false, 0.35)]
@@ -1569,7 +1640,8 @@ function showBenchmarks(y, r) {
 function benchClick(coords) {
   if (!BM_ZONES) return;
   inspectLabel.setValue('Reading values\u2026');
-  zoneImage().reduceRegion({reducer: ee.Reducer.first(), geometry: ee.Geometry.Point([coords.lon, coords.lat]),
+  (benchReady() ? ee.Image(BENCH_ZONES_ASSET).select('zone') : zoneImage())
+    .reduceRegion({reducer: ee.Reducer.first(), geometry: ee.Geometry.Point([coords.lon, coords.lat]),
     scale: 30}).evaluate(function (v) {
     var z = v && v.zone !== null && v.zone !== undefined ? BM_ZONES[v.zone] : null;
     if (!z) {
@@ -2328,11 +2400,13 @@ function start(found) {
     chTo.setValue(String(lastComplete() || YEARS[YEARS.length - 1]), false);
     setMode('year');
     if (EXPORT_GRAPHICS) exportGraphicsData();
+    if (EXPORT_BENCH) exportBenchAssets();
   });
 }
 ee.data.listAssets(ASSET_FOLDER.replace(/\/$/, ''), {}, function (res, err) {
   if (err || !res) { start(ALL_YEARS); return; }
   var names = (res.assets || []).map(function (a) { return a.name || a.id || ''; });
+  ASSET_NAMES = names;
   start(ALL_YEARS.filter(function (y) {
     return names.some(function (n) { return n.slice(-('lahore_v7_' + y).length) === 'lahore_v7_' + y; });
   }));
