@@ -43,6 +43,7 @@ var BUILDINGS_ID = 'GOOGLE/Research/open-buildings-temporal/v1'; // Google Open 
 var BUILDINGS_LAST = 2023;  // last year in the Open Buildings Temporal dataset
 var MAX_TREE_UNDER_GRASS = 0.3;
 var STAT_SCALE = 30;
+var PUBLIC_MODE = true;       // true: 'How We Know' shows the saved results of the last full run (no heavy re-run)
 var EXPORT_GRAPHICS = false;   // true: also print GRAPHICS_DATA to the Console for tools/build_visuals.py
 var MAP_HEIGHT = '500px';
 var FOLDER = 'lahore_gee_v7';
@@ -1283,6 +1284,31 @@ function timelapsePanel() {
   return p;
 }
 
+
+// Results of the last full verification run (October 2026), shown in the public app instead of re-running
+// the checks (3-10 minutes of computing per click). Set PUBLIC_MODE = false to run them live.
+var SAVED_CHECKS = [
+  ['C1', 'PASS', 'Clear images cover the whole city in every year'],
+  ['C2', 'PASS', 'Tree share stays within 4.0 points in protected forest and stable canopy'],
+  ['C3', 'WARN', 'Tree area about 9% below held-out 1 m canopy data (R² 0.41), mostly small trees'],
+  ['C4', 'PASS', '51% of held-out park open land found as grass; 21% of cropland counted as grass; built-up 25% (lawns, info)'],
+  ['C5', 'PASS', 'About 1% false change on land that cannot change'],
+  ['C6', 'PASS', 'Change 2019→2025 stays between +6% and +14% across model settings'],
+  ['C7', 'WARN', 'Three methods agree the cover rose, but disagree on how much (+13% to +76%)'],
+  ['C8', 'PASS', 'Grass / crop classifier passes on held-out points'],
+  ['C9', 'WARN', 'Total +5.0 km²/yr (95% CI −1.7 to +11.0); trees +1.0 km²/yr (CI −2.4 to +4.7): not yet established'],
+  ['C10', 'PASS', 'NASA GEDI laser canopy heights agree with the tree change (r = 0.62)'],
+  ['C11', 'PASS', '21.4 km² newly built 2019–2023 (Open Buildings); green fell on 77% of it, 1.7 km² lost'],
+  ['D1', 'INFO', 'Diagnostic only (spread between the three tree models)'],
+  ['D2', 'INFO', 'Green area follows rainfall (r = 0.62): part of the year-to-year change is weather']
+];
+function showSavedChecks() {
+  SAVED_CHECKS.forEach(function (c) { setRow(c[0], c[1], c[2]); });
+  verdict.setValue('Verdict: PARTLY SUPPORTED – warnings on C3 and C7 (C9 shows the trend is not yet ' +
+    'statistically established).\nModel estimate: 276.6 km² (2019) → 311.9 km² (2025), +35.3 km². ' +
+    'The direction is confirmed by independent data; report it as an estimate with caveats.');
+}
+
 var METHODS_PANEL = null;
 function methodsPanel() {
   if (METHODS_PANEL) return METHODS_PANEL;
@@ -1303,11 +1329,16 @@ function methodsPanel() {
   p.add(ui.Label('Ten scored checks test the model against data it was NOT trained on – held-out canopy ' +
     'samples, held-out OSM parks, land that cannot change – and two fully independent sources: NASA’s GEDI ' +
     'space laser and Google Open Buildings. Without field visits the best possible verdict is "well-supported", ' +
-    'not "field-verified". Running all checks takes about 3–10 minutes.', PARA));
-  p.add(ui.Button({label: 'Run all checks', onClick: runAll}));
+    'not "field-verified".' + (PUBLIC_MODE ? '' : ' Running all checks takes about 3–10 minutes.'), PARA));
+  if (PUBLIC_MODE) {
+    p.add(ui.Label('Results of the last full run (October 2026):', PARA));
+  } else {
+    p.add(ui.Button({label: 'Run all checks', onClick: runAll}));
+  }
   p.add(scorePanel);
   p.add(verdict);
   p.add(detailHolder);
+  if (PUBLIC_MODE) showSavedChecks();
   return p;
 }
 
