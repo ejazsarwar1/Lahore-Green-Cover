@@ -882,7 +882,7 @@ var subtitleLabel = ui.Label('Trees, grass, lawns and parks mapped from space ev
   'Sentinel-2 satellite images, 10 m', {fontSize: '13px', color: '#d9f0d3', backgroundColor: COL.dark,
   margin: '4px 8px 2px 8px', textAlign: 'center', stretch: 'horizontal'});
 // author byline, linked to the project on GitHub
-var bylineLabel = ui.Label('\u2014  \ud83c\udf3f  A satellite study by Muhammad Ejaz Sarwar (PAS)  \ud83c\udf3f  \u2014',
+var bylineLabel = ui.Label('A study by Muhammad Ejaz Sarwar (PAS)',
   {fontSize: '12px', fontStyle: 'italic', color: '#a6dba0', backgroundColor: COL.dark,
    margin: '2px 8px 8px 8px', textAlign: 'center', stretch: 'horizontal'},
   'https://github.com/ejazsarwar1/Lahore-Green-Cover');
