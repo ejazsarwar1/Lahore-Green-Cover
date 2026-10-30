@@ -46,6 +46,7 @@ var STAT_SCALE = 30;
 var PUBLIC_MODE = true;       // true: 'How We Know' shows the saved results of the last full run (no heavy re-run)
 var EXPORT_GRAPHICS = false;   // true: also print GRAPHICS_DATA to the Console for tools/build_visuals.py
 var EXPORT_BENCH = false;      // true once: starts two export tasks that make the Benchmarks tab load fast
+var RUN_CROP_CHECK = false;    // true: prints to the Console what 2019 farmland became by 2025 (editor only)
 var MAP_HEIGHT = '500px';
 var FOLDER = 'lahore_gee_v7';
 var BOUNDARY_ASSET = '';
@@ -2356,6 +2357,65 @@ function makeTimelapse() {
 var HOT_VIS = {min: -0.15, max: 0.15,
   palette: ['#b2182b', '#ef8a62', '#fddbc7', '#f7f7f7', '#d9f0d3', '#7fbf7b', '#1b7837']};
 
+// What did 2019 farmland become by the last complete year, and how much of the green gain sits on it?
+// Farmland = both our crop model (cropp >= 0.5) and Dynamic World (crops) agree. Two small calculations.
+function runCropCheck() {
+  var y0 = firstYear(), y1 = lastComplete();
+  print('Crop check ' + y0 + ' → ' + y1 + ': running (1–2 min)…');
+  var dw0 = img(y0).select('dwarg'), dw1 = img(y1).select('dwarg');
+  var cp0 = img(y0).select('cropp').divide(1000), cp1 = img(y1).select('cropp').divide(1000);
+  var farm0 = cp0.gte(0.5).and(dw0.eq(4)).unmask(0);
+  var built1 = dw1.eq(6).unmask(0), bare1 = dw1.eq(7).unmask(0), water1 = dw1.eq(0).unmask(0);
+  var still1 = cp1.gte(0.5).or(dw1.eq(4)).unmask(0).and(built1.or(bare1).or(water1).not());
+  var CATS = [['built', 'built-up', built1], ['bare', 'bare ground (cleared plots, roads)', bare1],
+    ['water', 'water', water1], ['farm', 'still farmland', still1],
+    ['veg', 'trees, grass or shrub (no longer crops)', built1.or(bare1).or(water1).or(still1).not()]];
+  var dT = treeAreaImg(y1).subtract(treeAreaImg(y0)), dG = grassAreaImg(y1).subtract(grassAreaImg(y0));
+  var bands = [AREA.updateMask(farm0).rename('farm0'),
+    dT.updateMask(farm0).rename('dT_farm'), dG.updateMask(farm0).rename('dG_farm'),
+    dT.updateMask(farm0.not()).rename('dT_rest'), dG.updateMask(farm0.not()).rename('dG_rest'),
+    grassAreaImg(y0).updateMask(farm0.and(still1)).rename('g0_stable'),
+    grassAreaImg(y1).updateMask(farm0.and(still1)).rename('g1_stable')];
+  CATS.forEach(function (c) {
+    var m = farm0.and(c[2]);
+    bands.push(AREA.updateMask(m).rename('a_' + c[0]), dT.add(dG).updateMask(m).rename('dg_' + c[0]));
+  });
+  var series = [];
+  YEARS.forEach(function (y) {
+    var dw = img(y).select('dwarg');
+    series.push(AREA.updateMask(img(y).select('cropp').gte(500)).rename('crop_' + y),
+      AREA.updateMask(dw.eq(4)).rename('dwcrop_' + y), AREA.updateMask(dw.eq(6)).rename('built_' + y),
+      AREA.updateMask(dw.eq(7)).rename('bare_' + y));
+  });
+  var sum = function (im) {
+    return im.clip(geom).reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE,
+      maxPixels: 1e11, tileScale: 4});
+  };
+  ee.Dictionary({t: sum(ee.Image.cat(bands)), s: sum(ee.Image.cat(series))}).evaluate(function (r, err) {
+    if (err) { print('Crop check failed: ' + err); return; }
+    var t = r.t, s = r.s, sg = function (x) { return (x >= 0 ? '+' : '') + fmt(x, 1); };
+    var gainFarm = t.dT_farm + t.dG_farm, gainRest = t.dT_rest + t.dG_rest, gainAll = gainFarm + gainRest;
+    var out = ['FARMLAND IN ' + y0 + ': ' + fmt(t.farm0, 1) + ' km² (crop model and Dynamic World agree)',
+      '', 'What it was in ' + y1 + ':'];
+    CATS.forEach(function (c) {
+      out.push('  ' + c[1] + ': ' + fmt(t['a_' + c[0]], 1) + ' km² (' + fmt(100 * t['a_' + c[0]] / t.farm0, 1) +
+        '%), green change there ' + sg(t['dg_' + c[0]]) + ' km²');
+    });
+    out.push('', 'NON-CROP GREEN CHANGE ' + y0 + ' → ' + y1 + ': ' + sg(gainAll) + ' km²',
+      '  on ' + y0 + ' farmland: ' + sg(gainFarm) + ' km² (trees ' + sg(t.dT_farm) + ', grass ' + sg(t.dG_farm) +
+        ') = ' + fmt(100 * gainFarm / gainAll, 0) + '% of the change',
+      '  on the rest of Lahore: ' + sg(gainRest) + ' km² (trees ' + sg(t.dT_rest) + ', grass ' + sg(t.dG_rest) + ')',
+      '', 'Grass counted on land that stayed farmland (false-grass check): ' + fmt(t.g0_stable, 1) + ' km² in ' +
+        y0 + ' → ' + fmt(t.g1_stable, 1) + ' km² in ' + y1,
+      '', 'YEAR BY YEAR (km²): crops (our model) / crops (Dynamic World) / built-up / bare');
+    YEARS.forEach(function (y) {
+      out.push('  ' + y + (isProvisional(y) ? '*' : '') + ': ' + fmt(s['crop_' + y], 0) + ' / ' +
+        fmt(s['dwcrop_' + y], 0) + ' / ' + fmt(s['built_' + y], 0) + ' / ' + fmt(s['bare_' + y], 0));
+    });
+    print(out.join('\n'));
+  });
+}
+
 function exportGraphicsData() {
   var y0 = firstYear(), y1 = lastComplete();
   print('Preparing graphics data for ' + y0 + ' → ' + y1 + ' (1–3 min)…');
@@ -2461,6 +2521,7 @@ function start(found) {
     setMode('year');
     if (EXPORT_GRAPHICS) exportGraphicsData();
     if (EXPORT_BENCH) exportBenchAssets();
+    if (RUN_CROP_CHECK) runCropCheck();
   });
 }
 checkBenchAssets();
