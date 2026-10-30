@@ -38,6 +38,8 @@ var DRIFT_CORRECT = true;   // remove year-to-year drift measured on land that c
 var CAL_YEAR = 2020;        // drift is measured relative to this year (the training year)
 var GRASS_QMATCH = true;    // (yes/no grass method only) year-matched cut-off
 var GRASS_METHOD = 'fraction'; // 'fraction' = grass as a share of each pixel (default); 'binary' = old yes/no
+var NO_GRASS_ON_CROPS = true;  // no grass where Dynamic World labels the pixel crops that year (fodder and fallow
+                               // fields were being counted as grass; the crop check found it rising 27 -> 44 km2)
 var GEDI_ID = 'LARSE/GEDI/GEDI02_A_002_MONTHLY';           // NASA GEDI canopy heights (independent)
 var BUILDINGS_ID = 'GOOGLE/Research/open-buildings-temporal/v1'; // Google Open Buildings 2.5D Temporal
 var BUILDINGS_LAST = 2023;  // last year in the Open Buildings Temporal dataset
@@ -47,6 +49,8 @@ var PUBLIC_MODE = true;       // true: 'How We Know' shows the saved results of 
 var EXPORT_GRAPHICS = false;   // true: also print GRAPHICS_DATA to the Console for tools/build_visuals.py
 var EXPORT_BENCH = false;      // true once: starts two export tasks that make the Benchmarks tab load fast
 var RUN_CROP_CHECK = false;    // true: prints to the Console what 2019 farmland became by 2025 (editor only)
+var REFRESH_RESULTS = false;   // true once in the editor: runs every check, then prints the saved numbers, the
+                               // graphics data and the crop check, and starts the Benchmarks exports
 var MAP_HEIGHT = '500px';
 var FOLDER = 'lahore_gee_v7';
 var BOUNDARY_ASSET = '';
@@ -698,7 +702,7 @@ function grassMask(y, opts) {
   var gp = grassProb(y, opts);
   return gp.gte(cut)
     .and(gp.gt(img(y).select('cropp').divide(1000)))
-    .and(treeFrac(y, opts).lt(MAX_TREE_UNDER_GRASS)).rename('grass');
+    .and(treeFrac(y, opts).lt(MAX_TREE_UNDER_GRASS)).and(notCrops(y)).rename('grass');
 }
 // --- Grass as a SHARE of each pixel (default) -----------------------------
 // green share = lasting NDVI scaled between bare (0) and full green (1);
@@ -715,7 +719,12 @@ function grassFracYear(y, opts) {
   var green = lastingN(y, useDrift(opts)).subtract(soil).divide(veg - soil).clamp(0, 1);
   var tfy = treeFrac(y, {smooth: false, band: opts.band, drift: opts.drift, floor: opts.floor});
   var crop = img(y).select('cropp').divide(1000).clamp(0, 1);
-  return green.subtract(tfy).max(0).multiply(ee.Image(1).subtract(crop)).multiply(worldCover.neq(80));
+  return green.subtract(tfy).max(0).multiply(ee.Image(1).subtract(crop)).multiply(worldCover.neq(80))
+    .multiply(notCrops(y));
+}
+// 1 except where Dynamic World labels the pixel crops in that year (and NO_GRASS_ON_CROPS is on)
+function notCrops(y) {
+  return NO_GRASS_ON_CROPS ? img(y).select('dwarg').neq(4).unmask(1) : ee.Image(1);
 }
 function grassFrac(y, opts) {
   opts = opts || {};
@@ -1570,8 +1579,8 @@ function bmLegend() {
 
 // Precomputed once (EXPORT_BENCH): zone map with one canopy-class band per year, and a table of
 // per-zone and district totals. When both assets exist the tab loads in seconds; otherwise it computes live.
-var BENCH_STATS_ASSET = ASSET_FOLDER + 'lahore_bench_stats';
-var BENCH_ZONES_ASSET = ASSET_FOLDER + 'lahore_bench_zones';
+var BENCH_STATS_ASSET = ASSET_FOLDER + 'lahore_bench_stats_v2';   // v2: grass not counted on crops
+var BENCH_ZONES_ASSET = ASSET_FOLDER + 'lahore_bench_zones_v2';
 // Published apps may not be allowed to list the asset folder, so each saved asset is looked up directly.
 var BENCH_OK = false;
 function checkBenchAssets() {
@@ -2303,7 +2312,10 @@ function runAll() {
   verdict.setValue('Verdict: running checks… (3–10 min)');
   var steps = [runC1, runC4, runC9, runC2, runC3, runC5, runC6, runC7, runC8, runC10, runC11, runD2];
   var i = 0;
-  var go = function () { if (i < steps.length) steps[i++](go); else showVerdict(); };
+  var go = function () {
+    if (i < steps.length) steps[i++](go);
+    else { showVerdict(); if (REFRESH_RESULTS) printRefresh(); }
+  };
   go();
 }
 
@@ -2416,6 +2428,73 @@ function runCropCheck() {
   });
 }
 
+// After a full run of the checks: print the numbers the public app shows (SAVED_RESULTS), clean map frames
+// and story numbers for tools/build_visuals.py (TIMELAPSE_DATA), the hotspot and benchmark data
+// (GRAPHICS_DATA) and the crop check, and start the Benchmarks exports. Frame links expire within hours.
+var CLEAN_REGION = ee.Geometry.Rectangle([73.98, 31.21, 74.63, 31.70]);
+var HOT_SMOOTH_VIS = {min: -0.12, max: 0.12,
+  palette: ['#b2182b', '#d6604d', '#f4a582', '#f7f7f7', '#a6dba0', '#5aae61', '#1b7837']};
+function cleanFrame(y) {
+  var L = layersFor(y);
+  return ee.Image(1).visualize({palette: ['ffffff']}).blend(L.bg.visualize(BG_VIS))
+    .blend(L.grass.visualize(grassMethod() === 'binary' ? {palette: [GRASS_COL.slice(1)]} : GRASS_VIS))
+    .blend(L.trees.visualize(TREE_VIS)).blend(outline);
+}
+function cleanHotspot(y0, y1) {
+  var dShare = greenAreaImg(y1).subtract(greenAreaImg(y0)).divide(AREA).focalMean(400, 'circle', 'meters').clip(geom);
+  return ee.Image(1).visualize({palette: ['ffffff']})
+    .blend(ee.Image(1).clip(geom).visualize({palette: ['f7f7f7']}))
+    .blend(dShare.updateMask(dShare.abs().gte(0.01)).visualize(HOT_SMOOTH_VIS)).blend(outline);
+}
+function printRefresh() {
+  var r2 = function (x) { return Math.round(x * 100) / 100; };
+  var y0 = firstYear(), y1 = lastComplete();
+  var k = RESULT.c3 ? RESULT.c3.scale : 1;
+  print('SAVED_RESULTS ' + JSON.stringify({
+    checks: CHECKS.map(function (c) { var x = RESULT[c[0]] || {}; return [c[0], x.status || '', x.text || '']; }),
+    areas: RESULT.areas.map(function (a) { return [a.year, r2(a.trees), r2(a.grass)]; }),
+    trend: {total: r2(RESULT.trend.sen), lo: r2(RESULT.ci.lo), hi: r2(RESULT.ci.hi),
+      trees: r2(RESULT.trendT.sen), treesLo: r2(RESULT.ciT.lo), treesHi: r2(RESULT.ciT.hi),
+      grass: r2(RESULT.trendG.sen), grassLo: r2(RESULT.ciG.lo), grassHi: r2(RESULT.ciG.hi)},
+    treeBiasFactor: Math.round(k * 1000) / 1000}));
+  var a0 = RESULT.areas.filter(function (a) { return a.year === y0; })[0];
+  var a1 = RESULT.areas.filter(function (a) { return a.year === y1; })[0];
+  var jobs = YEARS.map(function (y) { return [String(y), cleanFrame(y)]; });
+  jobs.push(['hotspot', cleanHotspot(y0, y1)]);
+  var urls = {}, left = jobs.length + 1, pop = null, all = null;
+  var done = function () {
+    if (--left > 0) return;
+    var t0 = a0.trees * k, t1 = a1.trees * k;
+    print('TIMELAPSE_DATA ' + JSON.stringify({region: [73.98, 31.21, 74.63, 31.70], years: YEARS,
+      provisional: PROVISIONAL, frames: urls, hotspotYears: [y0, y1], hotspotScale: HOT_SMOOTH_VIS.max,
+      areas: RESULT.areas.map(function (a) {
+        return {year: a.year, trees: r2(a.trees), grass: r2(a.grass), total: r2(a.trees + a.grass)}; }),
+      story: {y0: y0, y1: y1, trees0: r2(t0), trees1: r2(t1), grass0: r2(a0.grass), grass1: r2(a1.grass),
+        total0: r2(t0 + a0.grass), total1: r2(t1 + a1.grass), perPerson0: r2(1e6 * (t0 + a0.grass) / pop),
+        perPerson1: r2(1e6 * (t1 + a1.grass) / pop), population: Math.round(pop), districtKm2: r2(all),
+        treesBiasCorrected: k !== 1, gains: [], losses: []},
+      lostToBuildings: RESULT.C11 ? RESULT.C11.text : null,
+      trend: {trees: r2(RESULT.trendT.sen), treesLo: r2(RESULT.ciT.lo), treesHi: r2(RESULT.ciT.hi),
+        total: r2(RESULT.trend.sen), totalLo: r2(RESULT.ci.lo), totalHi: r2(RESULT.ci.hi)},
+      treeBiasFactor: Math.round(k * 1000) / 1000,
+      colours: {treesLight: TREE_PAL[0], treesDark: TREE_PAL[TREE_PAL.length - 1], grass: GRASS_VIS.palette[1],
+                crops: BG[0][1], built: BG[1][1], water: BG[2][1], bare: BG[3][1]},
+      hotColours: HOT_SMOOTH_VIS.palette}));
+    exportGraphicsData();
+    runCropCheck();
+    exportBenchAssets();
+    print('Copy the whole Console (SAVED_RESULTS, TIMELAPSE_DATA, GRAPHICS_DATA, crop check) and send it to ' +
+      'Claude within a few hours; then click RUN on the two tasks in the Tasks tab.');
+  };
+  ee.Image.cat([peopleImg(), AREA.rename('all')]).clip(geom).reduceRegion(sumOpts()).evaluate(function (r) {
+    pop = r ? r.pop : null; all = r ? r.all : null; done();
+  });
+  jobs.forEach(function (job) {
+    job[1].getThumbURL({region: CLEAN_REGION, dimensions: 1080, format: 'png', crs: 'EPSG:3857'},
+      function (url, err) { urls[job[0]] = err ? 'ERROR: ' + err : url; done(); });
+  });
+}
+
 function exportGraphicsData() {
   var y0 = firstYear(), y1 = lastComplete();
   print('Preparing graphics data for ' + y0 + ' → ' + y1 + ' (1–3 min)…');
@@ -2521,7 +2600,8 @@ function start(found) {
     setMode('year');
     if (EXPORT_GRAPHICS) exportGraphicsData();
     if (EXPORT_BENCH) exportBenchAssets();
-    if (RUN_CROP_CHECK) runCropCheck();
+    if (RUN_CROP_CHECK && !REFRESH_RESULTS) runCropCheck();
+    if (REFRESH_RESULTS) { print('Refreshing all results: running every check (3–10 min)…'); runAll(); }
   });
 }
 checkBenchAssets();
