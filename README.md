@@ -82,6 +82,9 @@ Ten scored checks test the model against data it was **not** trained on:
 |---|---|
 | `scripts/lahore_v7_A_build.js` | Earth Engine script A: trains the models and saves one map per year as assets (run once) |
 | `scripts/lahore_v7_B_app.js` | Earth Engine script B: the interactive app (yearly maps, change, timelapse, benchmarks, verification) |
+| `scripts/lahore_v8_C_landbudget.js` | Earth Engine script C (in progress): six-class land budget (trees, grass, crops, built-up, bare, water) from crop calendars, radar and building data |
+| `tools/road_area.py` | Road surface area from OpenStreetMap (length × typical width by road type) |
+| `data/lahore_osm_roads_2026.tsv` | OpenStreetMap road lengths by type for Lahore district (input to `road_area.py`) |
 | `data/lahore_osm_green.zip` | 1,731 OpenStreetMap green-space polygons for Lahore (shapefile), used for training and testing |
 | `graphics/` | Timelapse GIF, summary card and hotspot map |
 | `tools/build_visuals.py` | Builds the graphics from the app's exported data (Python and Pillow) |
