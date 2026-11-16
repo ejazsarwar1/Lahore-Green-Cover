@@ -13,14 +13,17 @@
 | | 2019 | 2025 | Change |
 |---|---|---|---|
 | Tree cover | 62.9 km² | 69.8 km² | +6.9 km² (+11%) |
-| Grass, lawns, parks | 213.7 km² | 242.1 km² | +28.4 km² (+13%) |
-| **Total non-crop green** | **276.6 km²** | **311.9 km²** | **+35.3 km² (+13%)** |
-| Share of the district | 16.3% | 18.4% | +2.1 points |
+| Grass, lawns, parks | 144.3 km² | 171.4 km² | +27.1 km² (+19%) |
+| **Total non-crop green** | **207.2 km²** | **241.2 km²** | **+34.0 km² (+16%)** |
+| Share of the district | 12.2% | 14.2% | +2.0 points |
 
-- Lahore's non-crop green cover **grew by about 35 km² between 2019 and 2025**, and both NASA's GEDI space laser and Google Open Buildings point the same way.
-- The rise is **not yet a statistically established trend**: 7 years of data (2019–2025) is too short, and year-to-year swings are large and partly follow rainfall (r = 0.62).
-- Green is still being lost to construction. **21.4 km² was newly built between 2019 and 2023**, and green cover fell on 77% of that land.
+- Lahore's non-crop green cover **grew by about 34 km² between 2019 and 2025**, and both NASA's GEDI space laser and Google Open Buildings point the same way.
+- The rise is **only just statistically significant** (+5.0 km²/yr, 95% CI +0.05 to +7.9) and comes mostly from grass. The tree trend is not significant. 7 years (2019–2025) is a short record, and year-to-year swings partly follow rainfall (r = 0.74).
+- **Lahore is losing farmland to construction.** Cropland fell from about 747 km² to 681 km² (−9%) between 2019 and 2025, while built-up land grew by about the same amount (Google Dynamic World shows the same). The largest green gains are lawns and verges in new housing schemes such as DHA Phases 7 and 8, built on former fields.
+- Green is also lost to construction inside the city. **21.4 km² was newly built between 2019 and 2023**, and green cover fell on 74% of that land.
 - The model under-counts tree area by about 9% of itself, mostly small trees. Allowing for this, 2025 tree cover is about 76 km², not 70 km². That's a change of less than half a percentage point of the district.
+
+> **Correction (November 2026):** an earlier version counted about 70 km² of fodder and fallow fields as grass, giving 277 → 312 km². A crop check showed this false grass was rising over time, so grass is no longer counted where Google Dynamic World labels the land cropland in that year. Grass on fields that stayed fields fell from 44 km² to under 3 km².
 
 ![Is Lahore getting greener?](graphics/lahore_green_cover.png)
 
@@ -29,7 +32,7 @@
 | Benchmark | Lahore | Target |
 |---|---|---|
 | Tree canopy, share of the district (3-30-300 rule) | 4.1% | 30% per neighbourhood |
-| Non-crop green per resident | 24 m² | commonly quoted minimum 9 m², ideal 50 m² |
+| Non-crop green per resident | 19 m² | commonly quoted minimum 9 m², ideal 50 m² |
 | Residents within 300 m of a park of at least 0.5 ha | 24% | 100% (WHO/Europe) |
 | Neighbourhoods meeting 30% canopy | 0 of 137 | all |
 
@@ -46,7 +49,7 @@ The district share includes farmland, so the fair comparison with the 30% target
 **Data:** Sentinel-2 surface reflectance (ESA/Copernicus), cloud-masked with Google Cloud Score+ plus a haze filter. Each year uses three seasons: February–March, May–June and early October.
 
 1. **Trees.** A random-forest model estimates the share of every 10 m pixel covered by trees. It's trained on the Meta/WRI 1 m global canopy-height map (trees of 3 m or taller).
-2. **Grass, lawns and parks.** This is the share of each pixel that stays green all year and isn't trees. Crops are removed with a classifier trained and tested on OpenStreetMap parks, lawns and golf courses.
+2. **Grass, lawns and parks.** This is the share of each pixel that stays green all year and isn't trees. Crops are removed with a classifier trained and tested on OpenStreetMap parks, lawns and golf courses, and no grass is counted where Google Dynamic World labels the land cropland in that year.
 3. **Crops are excluded** because wheat and rice are green for only a few months.
 4. **Consistency between years.** Images are normalised to 2021. Remaining drift is measured and removed on land that can't change, such as dense old built-up areas and permanent water.
 5. **Trend.** Mann-Kendall test with Sen's slope and a 95% confidence interval.
@@ -60,16 +63,16 @@ Ten scored checks test the model against data it was **not** trained on:
 | C1 Clear-image coverage across the city | ✅ |
 | C2 Stable in protected forests and stable canopy | ✅ |
 | C3 Tree share vs held-out 1 m canopy | ⚠ about 9% under-count, R² 0.41 |
-| C4 Grass found in held-out OSM parks; little false grass in crops | ✅ |
+| C4 Grass found in held-out OSM parks; little false grass in crops | ✅ 2% of grass in cropland |
 | C5 False change on land that can't change | ✅ about 1% |
-| C6 Robust to model settings | ✅ +6% to +14% across variants |
-| C7 Three methods agree on direction | ⚠ +13% to +76% |
-| C8 Grass/crop classifier accuracy | ✅ |
-| C9 Trend and 95% confidence interval | ⚠ positive, not significant (7 years is too short) |
+| C6 Robust to model settings | ✅ +10% to +18% across variants |
+| C7 Three methods agree on direction | ⚠ +16% to +76% |
+| C8 Grass/crop classifier accuracy | ✅ 96% / 99% |
+| C9 Trend and 95% confidence interval | ✅ total only just significant, mostly grass; trees not significant |
 | C10 Independent: NASA GEDI laser canopy heights | ✅ r = 0.62 |
 | C11 Independent: green lost where new buildings appeared | ✅ |
 
-**Verdict: partly supported.** The direction is independently confirmed, but 7 years of data (2019–2025) is too short to prove a trend. Without field visits, the best this method can reach is "well supported", not "field-verified".
+**Verdict: partly supported.** The direction is independently confirmed. The total trend is only just significant and comes mostly from grass, and 7 years of data (2019–2025) is a short record. Without field visits, the best this method can reach is "well supported", not "field-verified".
 
 ---
 

@@ -311,8 +311,10 @@ def build_cover(payload, frames, out_path):
     if s and s.get('treesBiasCorrected') and k:
         d.text((W / 2, H - 92), 'Tree cover corrected \u00d7%.2f for the under-count found against 1 m canopy data' % k,
                fill=MUTED, font=F_SMALL, anchor='mm')
-    note = 'Model estimate. ' + ('Trend %+.1f km\u00b2/yr (95%% CI %+.1f to %+.1f): not yet statistically significant.' %
-                                 (tr['total'], tr['totalLo'], tr['totalHi']) if tr else '')
+    verdict = ('only just significant, and mostly grass' if tr and tr['totalLo'] > 0
+               else 'not yet statistically significant')
+    note = 'Model estimate. ' + ('Trend %+.1f km\u00b2/yr (95%% CI %+.1f to %+.1f): %s.' %
+                                 (tr['total'], tr['totalLo'], tr['totalHi'], verdict) if tr else '')
     footer(d, note)
     canvas.save(out_path)
     return out_path

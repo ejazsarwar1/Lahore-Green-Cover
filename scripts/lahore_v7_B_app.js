@@ -1330,28 +1330,29 @@ function timelapsePanel() {
 }
 
 
-// Results of the last full verification run (October 2026), shown in the public app instead of re-running
-// the checks (3-10 minutes of computing per click). Set PUBLIC_MODE = false to run them live.
+// Results of the last full verification run (November 2026, grass not counted on crops), shown in the public
+// app instead of re-running the checks (3-10 minutes of computing per click). Set PUBLIC_MODE = false to run them live.
 var SAVED_CHECKS = [
-  ['C1', 'PASS', 'Clear images cover the whole city in every year'],
+  ['C1', 'PASS', 'Clear images cover at least 90% of the city in every season'],
   ['C2', 'PASS', 'Tree share stays within 4.0 points in protected forest and stable canopy'],
   ['C3', 'WARN', 'Tree area about 9% below held-out 1 m canopy data (R² 0.41), mostly small trees'],
-  ['C4', 'PASS', '51% of held-out park open land found as grass; 21% of cropland counted as grass; built-up 25% (lawns, info)'],
+  ['C4', 'PASS', '43% of held-out park open land found as grass; only 2% of all grass lies in cropland ' +
+    '(was 21% before crops were excluded); 35% in built-up areas (lawns)'],
   ['C5', 'PASS', 'About 1% false change on land that cannot change'],
-  ['C6', 'PASS', 'Change 2019→2025 stays between +6% and +14% across model settings'],
-  ['C7', 'WARN', 'Three methods agree the cover rose, but disagree on how much (+13% to +76%)'],
-  ['C8', 'PASS', 'Grass / crop classifier passes on held-out points'],
-  ['C9', 'WARN', 'Total +5.0 km²/yr (95% CI −1.7 to +11.0); trees +1.0 km²/yr (CI −2.4 to +4.7): not yet established, as 7 years of data ' +
-    '(2019–2025) is too short to prove a trend'],
+  ['C6', 'PASS', 'Change 2019→2025 stays between +10% and +18% across model settings'],
+  ['C7', 'WARN', 'Three methods agree the cover rose, but disagree on how much (+16% to +76%)'],
+  ['C8', 'PASS', 'Grass vs not 96% and crops vs not 99% correct on 1,373 held-out points'],
+  ['C9', 'PASS', 'Total +5.0 km²/yr (95% CI +0.05 to +7.9): only just significant, and driven by grass ' +
+    '(+2.8 km²/yr); trees +1.0 km²/yr (CI −2.4 to +4.7) not established. 7 years is a short record'],
   ['C10', 'PASS', 'NASA GEDI laser canopy heights agree with the tree change (r = 0.62)'],
-  ['C11', 'PASS', '21.4 km² newly built 2019–2023 (Open Buildings); green fell on 77% of it, 1.7 km² lost'],
-  ['D1', 'INFO', 'Diagnostic only (spread between the three tree models)'],
-  ['D2', 'INFO', 'Green area follows rainfall (r = 0.62): part of the year-to-year change is weather']
+  ['C11', 'PASS', '21.4 km² newly built 2019–2023 (Open Buildings); green fell on 74% of it, 1.5 km² lost'],
+  ['D1', 'INFO', 'Diagnostic only (spread between the three tree models: 3%)'],
+  ['D2', 'INFO', 'Green area follows rainfall (r = 0.74): part of the year-to-year change is weather']
 ];
 var SAVED_AREAS = [   // [year, trees, grass] in km2 from the last full run; 2026 provisional
-  [2019, 62.92, 213.66], [2020, 67.24, 219.62], [2021, 73.45, 227.47], [2022, 76.85, 231.89],
-  [2023, 74.04, 230.18], [2024, 68.82, 226.95], [2025, 69.81, 242.08], [2026, 70.99, 249.93]];
-var SAVED_SEN = 5.01;   // km2 per year, total non-crop green 2019-2025 (95% CI -1.72 to +10.95)
+  [2019, 62.92, 144.32], [2020, 67.24, 147.92], [2021, 73.45, 151.82], [2022, 76.85, 153.43],
+  [2023, 74.04, 154.85], [2024, 68.82, 156.60], [2025, 69.81, 171.40], [2026, 70.99, 177.41]];
+var SAVED_SEN = 5.00;   // km2 per year, total non-crop green 2019-2025 (95% CI +0.05 to +7.92)
 function savedTrendChart() {
   var t0 = SAVED_AREAS[0][0], complete = SAVED_AREAS.filter(function (a) { return !isProvisional(a[0]); });
   var resid = complete.map(function (a) { return a[1] + a[2] - SAVED_SEN * (a[0] - t0); }).sort(function (a, b) {
@@ -1366,7 +1367,7 @@ function savedTrendChart() {
   });
   return ui.Chart(rows, 'LineChart', {
     title: 'Non-crop green area (km\u00b2) \u00b7 trend +' + SAVED_SEN.toFixed(1) +
-      ' km\u00b2/yr, not yet statistically significant (7 years is too short) \u00b7 2026* provisional',
+      ' km\u00b2/yr, only just significant and mostly grass \u00b7 2026* provisional',
     titleTextStyle: {fontSize: 12, bold: false, color: '#444'},
     colors: ['#1b7837', '#93c02c', '#0b5a2a', '#888888'],
     series: {0: {lineWidth: 3, pointSize: 6}, 1: {lineWidth: 2, pointSize: 4}, 2: {lineWidth: 2, pointSize: 4},
@@ -1390,7 +1391,7 @@ function trendPanel() {
 
 function showSavedChecks() {
   SAVED_CHECKS.forEach(function (c) { setRow(c[0], c[1], c[2]); });
-  verdict.setValue('Model estimate: 276.6 km² (2019) → 311.9 km² (2025), +35.3 km². ' +
+  verdict.setValue('Model estimate: 207.2 km² (2019) → 241.2 km² (2025), +34.0 km². ' +
     'The direction is confirmed by independent data; report it as an estimate with caveats.');
 }
 
@@ -1444,8 +1445,11 @@ function aboutPanel() {
     '• Tree cover is under-estimated by roughly 9% of the tree area compared with 1 m canopy data, mainly very ' +
     'small trees (about 70 km² shown is really about 76 km²; a change of under half a percentage point of ' +
     'Lahore, not 9 points).\n' +
-    '• Year-to-year changes are partly weather-related; the 2019–2025 increase is not yet a statistically ' +
-    'proven trend, because 7 years of data is too short (details in "How We Know").\n' +
+    '• Grass is not counted where Google Dynamic World labels the land cropland that year, so fodder and ' +
+    'fallow fields are not mistaken for lawns. Much of the new grass is lawns and verges in housing schemes ' +
+    'built on former farmland: about 9% of Lahore’s farmland was lost to building between 2019 and 2025.\n' +
+    '• Year-to-year changes are partly weather-related; the 2019–2025 increase is only just statistically ' +
+    'significant, comes mostly from grass, and 7 years is a short record (details in "How We Know").\n' +
     '• Neighbourhood names are approximate reference points, not boundaries.\n' +
     '• The district outline is simplified (geoBoundaries).', PARA));
   p.add(ui.Label('Data sources', HEADING));
