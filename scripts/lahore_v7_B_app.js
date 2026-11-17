@@ -938,9 +938,10 @@ var areaSelect = ui.Select({items: ['All of Lahore'].concat(PLACES.map(function 
 var changeChip = chip('Change \u2192', function () { setMode('change'); });
 var timelapseChip = chip('Timelapse', function () { setMode('timelapse'); });
 var benchChip = chip('Lahore vs Benchmarks', function () { setMode('bench'); });
+var budgetChip = chip('Land Budget', function () { setMode('budget'); });
 var howChip = chip('How We Know', function () { setMode('methods'); });
 var aboutChip = chip('About & Data', function () { setMode('about'); });
-var exploreRow = navRow([navLabel('Explore'), changeChip.wrap, timelapseChip.wrap, benchChip.wrap]);
+var exploreRow = navRow([navLabel('Explore'), changeChip.wrap, timelapseChip.wrap, benchChip.wrap, budgetChip.wrap]);
 var zoomRow = navRow([navLabel('Zoom to neighbourhood', true), areaSelect]);
 var learnRow = navRow([navLabel('Learn more'), howChip.wrap, aboutChip.wrap]);
 var nav = ui.Panel([yearRow, exploreRow, zoomRow, learnRow], null, {backgroundColor: COL.light, stretch: 'horizontal',
@@ -954,6 +955,7 @@ function styleNav() {
   setChip(changeChip, mode === 'change');
   setChip(timelapseChip, mode === 'timelapse');
   setChip(benchChip, mode === 'bench');
+  setChip(budgetChip, mode === 'budget');
   setChip(howChip, mode === 'methods');
   setChip(aboutChip, mode === 'about');
   changeChip.btn.setLabel('Change ' + chFrom.getValue() + ' → ' + chTo.getValue());
@@ -1059,7 +1061,7 @@ var mapRow = ui.Panel([mapColumn, sidePanel], ui.Panel.Layout.flow('horizontal')
   {stretch: 'horizontal', margin: '0', padding: '0'});
 function isWholeCity() { return !areaSelect.getValue() || areaSelect.getValue() === 'All of Lahore'; }
 function updateCardVisibility() {
-  var whole = isWholeCity() || mode === 'bench';
+  var whole = isWholeCity() || mode === 'bench' || mode === 'budget';
   cardsBox.style().set('shown', whole);
   cardsNote.style().set('shown', !whole);
 }
@@ -1174,7 +1176,7 @@ function zoomTo(v) {
   var whole = !v || v === 'All of Lahore';
   var redraw = contextBox.getValue() !== whole;
   contextBox.setValue(whole, false);   // faint crops/built-up/bare off near a neighbourhood: street names show through
-  if (mode !== 'year' && mode !== 'change' && mode !== 'bench') setMode('year');
+  if (mode !== 'year' && mode !== 'change' && mode !== 'bench' && mode !== 'budget') setMode('year');
   else if (redraw && mode === 'year') renderYear(selectedYear);
   else if (redraw && mode === 'change') renderChange();
   if (!v || v === 'All of Lahore') map.centerObject(lahore);
@@ -1208,6 +1210,17 @@ function setMode(m) {
     content.add(mapRow);
     content.add(bmNote);
     renderBenchmarks();
+  } else if (m === 'budget') {
+    cardsBox.clear();
+    cardsBox.add(budgetCards);
+    changeNote.style().set('shown', false);
+    inspectLabel.setValue('Click the map to see how a 10 m pixel is split between the six classes.');
+    if (!lbYear.getValue()) lbYear.setValue(String(lastComplete() || YEARS[YEARS.length - 1]), false);
+    content.add(controlsRow([ctrlLabel('Year:'), lbYear]));
+    content.add(mapRow);
+    content.add(lbFlows);
+    content.add(lbNote);
+    renderBudget();
   } else if (m === 'timelapse') {
     content.add(timelapsePanel());
   } else if (m === 'methods') {
@@ -1466,6 +1479,7 @@ function aboutPanel() {
 
 map.onClick(function (coords) {
   if (mode === 'bench') { benchClick(coords); return; }
+  if (mode === 'budget') { budgetClick(coords); return; }
   if (mode !== 'year' && mode !== 'change') return;
   var pt = ee.Geometry.Point([coords.lon, coords.lat]);
   inspectLabel.setValue('Reading values…');
@@ -1737,6 +1751,200 @@ function benchClick(coords) {
   });
 }
 
+// ---------------------------------------------------------------------
+// 6b. LAND BUDGET: every pixel split into six classes that add up to 100 %
+// ---------------------------------------------------------------------
+// Trees and grass keep the tested shares above; the rest of each pixel is shared among crops, built-up,
+// bare ground and water in proportion to Script C's class probabilities (assets lahore_v8_lc_YYYY).
+var LC_PREFIX = ASSET_FOLDER + 'lahore_v8_lc_';
+var LB = [['trees', 'Trees', '#1b7837'], ['grass', 'Grass, lawns, parks', '#a6d96a'],
+          ['crops', 'Cropland', '#f1d581'], ['built', 'Built-up (grey)', '#8c8c8c'],
+          ['bare', 'Bare ground', '#d9b38c'], ['water', 'Water', '#2b8cbe']];
+var CROP_TYPES = [[1, 'winter crop only (wheat)'], [2, 'summer crop only (rice)'], [3, 'two crops a year']];
+var ROAD_KM2 = 119.3, ROAD_LO = 89.4, ROAD_HI = 149.1;   // tools/road_area.py: OpenStreetMap 2026, widths +/-25 %
+var LC_OK = {};
+function checkLcAssets() {
+  ALL_YEARS.forEach(function (y) {
+    ee.data.getAsset(LC_PREFIX + y, function (a, e) { LC_OK[y] = !e && !!a; });
+  });
+}
+function lcReady(y) { return !!LC_OK[y]; }
+function budgetImg(y) {
+  var t = treeFrac(y).unmask(0), g = grassFrac(y).unmask(0);
+  var s = t.add(g).max(1);
+  t = t.divide(s); g = g.divide(s);
+  var rest = ee.Image(1).subtract(t).subtract(g).max(0);
+  var lc = ee.Image(LC_PREFIX + y);
+  var p = lc.select(['p_crops', 'p_built', 'p_bare', 'p_water']).divide(1000);
+  // where Script C sees only trees or grass but the shares above leave something over, fall back on Dynamic World
+  var dw = img(y).select('dwarg');
+  var fb = ee.Image.cat([dw.eq(4), dw.neq(4).and(dw.neq(7)).and(dw.neq(0)), dw.eq(7), dw.eq(0)]).unmask(0)
+    .rename(['p_crops', 'p_built', 'p_bare', 'p_water']);
+  var sum4 = p.reduce(ee.Reducer.sum());
+  p = p.where(sum4.lt(0.05), fb);
+  p = p.divide(p.reduce(ee.Reducer.sum()).max(0.001));
+  return ee.Image.cat([t.rename('trees'), g.rename('grass'), p.multiply(rest).rename(['crops', 'built', 'bare', 'water'])])
+    .updateMask(lc.select('lc').mask()).clip(geom);
+}
+function dominantClass(b) { return b.toArray().arrayArgmax().arrayGet(0).rename('dom'); }
+function buildingsPresence(y) {
+  return ee.ImageCollection(BUILDINGS_ID).filterBounds(geom)
+    .filterDate(ee.Date.fromYMD(Math.min(y, BUILDINGS_LAST), 1, 1), ee.Date.fromYMD(Math.min(y, BUILDINGS_LAST) + 1, 1, 1))
+    .select('building_presence').mosaic();
+}
+
+var lbYear = ui.Select({items: ALL_YEARS.map(String), placeholder: 'Year',
+  onChange: function () { renderBudget(); }, style: {margin: '6px 4px'}});
+var lbChart = ui.Panel(null, null, {margin: '0'});
+var lbTable = ui.Label('', {fontSize: '12px', color: '#333', margin: '6px 0', whiteSpace: 'pre-wrap'});
+var budgetCards = ui.Panel([lbChart, lbTable], null, {margin: '0'});
+var lbFlows = ui.Panel(null, null, {margin: '4px 8px'});
+var lbNote = ui.Label(
+  'How it is made: trees and grass are the tested shares used everywhere in this app. The rest of each 10 m ' +
+  'pixel is shared among cropland, built-up, bare ground and water using a second model (Sentinel-2 crop ' +
+  'calendars, Sentinel-1 radar, Google Open Buildings and Dynamic World), so the six classes add up to the whole ' +
+  'district. Roads are OpenStreetMap road lengths times typical widths for each road type. Buildings are Google ' +
+  'Open Buildings (latest year 2023). These are model estimates checked against independent data, not survey ' +
+  'figures; the map shows the largest class in each pixel.', SMALL);
+function lbLegend() {
+  var p = ui.Panel(null, null, {padding: '6px 8px', backgroundColor: 'rgba(255,255,255,0.94)',
+    width: IS_PHONE ? 'auto' : '190px'});
+  p.add(ui.Label('Largest class in each pixel', {fontWeight: 'bold', fontSize: '12px', margin: '0 0 2px 0',
+    backgroundColor: CLEAR}));
+  LB.forEach(function (c) {
+    p.add(ui.Panel([
+      ui.Label('', {backgroundColor: c[2], padding: '6px 9px', margin: '3px 6px 0 0', border: '1px solid #888'}),
+      ui.Label(c[1], {fontSize: '12px', margin: '3px 0 0 0', backgroundColor: CLEAR})
+    ], ui.Panel.Layout.flow('horizontal'), {backgroundColor: CLEAR}));
+  });
+  return p;
+}
+
+var LB_CACHE = {}, LB_FLOWS = null, lbRequest = 0;
+function renderBudget() {
+  if (mode !== 'budget') return;
+  var y = Number(lbYear.getValue());
+  styleNav();
+  yearBadge.setValue(y + (isProvisional(y) ? ' (provisional)' : ''));
+  sideTitle.setValue('Lahore’s land, ' + y);
+  if (!lcReady(y)) {
+    map.layers().reset(contextLayers());
+    lbChart.clear();
+    lbTable.setValue('The land budget for ' + y + ' is not available yet (Script C asset lahore_v8_lc_' + y +
+      ' is missing or not shared).');
+    return;
+  }
+  var b = budgetImg(y);
+  map.layers().reset([ui.Map.Layer(dominantClass(b), {min: 0, max: 5, palette: LB.map(function (c) { return c[2]; })},
+    'Land budget ' + y + ' (largest class)', true, 0.85)].concat(contextLayers()));
+  showLegend(lbLegend());
+  if (LB_CACHE[y]) { showBudget(y, LB_CACHE[y]); } else {
+    var id = ++lbRequest;
+    startLoading('Loading the land budget');
+    lbChart.clear();
+    lbTable.setValue('Calculating (about 20–40 s)…');
+    var lc = ee.Image(LC_PREFIX + y);
+    var crops = b.select('crops');
+    var stack = b.multiply(AREA).addBands(ee.Image.cat(CROP_TYPES.map(function (c) {
+      return crops.multiply(AREA).updateMask(lc.select('croptype').eq(c[0])).rename('ct' + c[0]);
+    })));
+    var tot = stack.reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE,
+      maxPixels: 1e11, tileScale: 4});
+    var bld = ee.Image.pixelArea().divide(1e6).updateMask(buildingsPresence(y).gte(0.5)).rename('bld')
+      .reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: 10, maxPixels: 1e11, tileScale: 8});
+    ee.Dictionary({tot: tot, bld: bld.get('bld')}).evaluate(function (r, err) {
+      if (id !== lbRequest) return;
+      finishLoading();
+      if (err) { lbTable.setValue('Error: ' + err); return; }
+      LB_CACHE[y] = r;
+      if (mode === 'budget' && Number(lbYear.getValue()) === y) showBudget(y, r);
+    });
+  }
+  renderFlows();
+}
+function showBudget(y, r) {
+  var t = r.tot, all = 0;
+  LB.forEach(function (c) { all += t[c[0]] || 0; });
+  var rows = [['Class', 'km²']];
+  LB.forEach(function (c) { rows.push([c[1], Math.round((t[c[0]] || 0) * 10) / 10]); });
+  lbChart.clear();
+  lbChart.add(ui.Chart(rows, 'PieChart', {colors: LB.map(function (c) { return c[2]; }), pieHole: 0.45,
+    legend: {position: 'none'}, chartArea: {left: 8, right: 8, top: 8, bottom: 8}, height: 210,
+    pieSliceText: 'percentage', pieSliceTextStyle: {color: '#222', fontSize: 11}}));
+  var line = function (label, km, indent) {
+    return (indent ? '    ' : '') + label + ': ' + fmt(km, 0) + ' km² (' + fmt(100 * km / all, 1) + '%)';
+  };
+  var out = LB.map(function (c) { return line(c[1], t[c[0]] || 0); });
+  var ct = CROP_TYPES.map(function (c) { return line(c[1], t['ct' + c[0]] || 0, true); });
+  out.splice(3, 0, ct.join('\n'));
+  var built = t.built || 0, bld = Math.min(r.bld || 0, built);
+  var road = Math.min(ROAD_KM2, Math.max(built - bld, 0));
+  out.push('', 'Inside built-up (grey):',
+    line('buildings (Open Buildings ' + Math.min(y, BUILDINGS_LAST) + ')', bld, true),
+    '    roads (OpenStreetMap 2026): about ' + fmt(road, 0) + ' km² (range ' + fmt(ROAD_LO, 0) + '–' +
+      fmt(ROAD_HI, 0) + ')',
+    line('other paved and yards', Math.max(built - bld - road, 0), true),
+    '', 'District total: ' + fmt(all, 0) + ' km²' + (isProvisional(y) ? ' · ' + y + ' is provisional' : ''));
+  lbTable.setValue(out.join('\n'));
+}
+// where 2019 farmland went by the last complete year, from the largest class in each pixel
+function renderFlows() {
+  var y0 = firstYear(), y1 = lastComplete();
+  if (!lcReady(y0) || !lcReady(y1)) { lbFlows.clear(); return; }
+  if (LB_FLOWS) { showFlows(y0, y1, LB_FLOWS); return; }
+  lbFlows.clear();
+  lbFlows.add(ui.Label('Where the land went, ' + y0 + ' → ' + y1, HEADING));
+  lbFlows.add(ui.Label('Calculating…', SMALL));
+  var code = dominantClass(budgetImg(y0)).multiply(10).add(dominantClass(budgetImg(y1)));
+  var b0 = budgetImg(y0).multiply(AREA), b1 = budgetImg(y1).multiply(AREA);
+  ee.Dictionary({
+    flows: AREA.addBands(code).reduceRegion({reducer: ee.Reducer.sum().group({groupField: 1, groupName: 'code'}),
+      geometry: geom, scale: STAT_SCALE, maxPixels: 1e11, tileScale: 8}).get('groups'),
+    t0: b0.reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE, maxPixels: 1e11, tileScale: 4}),
+    t1: b1.reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE, maxPixels: 1e11, tileScale: 4})
+  }).evaluate(function (r, err) {
+    if (err) { lbFlows.clear(); lbFlows.add(ui.Label('Flows: ' + err, SMALL)); return; }
+    LB_FLOWS = r;
+    if (mode === 'budget') showFlows(y0, y1, r);
+  });
+}
+function showFlows(y0, y1, r) {
+  var m = {};
+  (r.flows || []).forEach(function (g) { m[g.code] = g.sum; });
+  var from = function (i) { var s = 0; for (var j = 0; j < 6; j++) s += m[i * 10 + j] || 0; return s; };
+  var rows = [['Class', String(y0), String(y1)]];
+  LB.forEach(function (c) { rows.push([c[1], Math.round(r.t0[c[0]]), Math.round(r.t1[c[0]])]); });
+  var farm = from(2);
+  var lines = LB.map(function (c, j) {
+    return '    ' + c[1].toLowerCase() + ': ' + fmt(m[20 + j] || 0, 1) + ' km² (' +
+      fmt(100 * (m[20 + j] || 0) / farm, 1) + '%)';
+  });
+  var gainBuilt = 0;
+  for (var i = 0; i < 6; i++) if (i !== 3) gainBuilt += m[i * 10 + 3] || 0;
+  lbFlows.clear();
+  lbFlows.add(ui.Label('Where the land went, ' + y0 + ' → ' + y1, HEADING));
+  lbFlows.add(ui.Chart(rows, 'ColumnChart', {colors: ['#bdbdbd', '#1b7837'], height: 260,
+    vAxis: {title: 'km²', gridlines: {color: '#eee'}}, legend: {position: 'top'},
+    chartArea: {left: 60, right: 15, top: 30, bottom: 60}}));
+  lbFlows.add(ui.Label(
+    'Cropland in ' + y0 + ' (largest class): ' + fmt(farm, 0) + ' km². By ' + y1 + ' it was:\n' + lines.join('\n') +
+    '\nNew built-up land ' + y0 + '–' + y1 + ': ' + fmt(gainBuilt, 0) + ' km², of which ' +
+    fmt(100 * (m[23] || 0) / Math.max(gainBuilt, 1e-6), 0) + '% was cropland in ' + y0 + '.\n' +
+    'Pixel-by-pixel change of the largest class exaggerates small shifts, so read these as approximate.', MONO));
+}
+function budgetClick(coords) {
+  var y = Number(lbYear.getValue());
+  if (!lcReady(y)) return;
+  inspectLabel.setValue('Reading values…');
+  budgetImg(y).reduceRegion({reducer: ee.Reducer.first(), geometry: ee.Geometry.Point([coords.lon, coords.lat]),
+    scale: 10}).evaluate(function (v) {
+    if (!v || v.trees === null || v.trees === undefined) { inspectLabel.setValue('No data here.'); return; }
+    inspectLabel.setValue('This 10 m pixel in ' + y + ':\n' + LB.map(function (c) {
+      return c[1] + ': ' + fmt(100 * v[c[0]], 0) + '%';
+    }).join('\n'));
+  });
+}
+
 // --- Phone / desktop layout
 var LAYOUT_SET = false;
 function applyLayout(isPhone) {
@@ -1762,7 +1970,7 @@ function applyLayout(isPhone) {
       padding: isPhone ? '6px 8px' : '8px 12px'});
     c.num.style().set('fontSize', isPhone ? '18px' : '24px');
   });
-  if (mode === 'year' || mode === 'change' || mode === 'bench') setMode(mode);   // re-place the legend
+  if (mode === 'year' || mode === 'change' || mode === 'bench' || mode === 'budget') setMode(mode);   // re-place the legend
 }
 try {
   ui.root.onResize(function (info) { applyLayout(info.width < 700); });
@@ -2609,6 +2817,7 @@ function start(found) {
   });
 }
 checkBenchAssets();
+checkLcAssets();
 ee.data.listAssets(ASSET_FOLDER.replace(/\/$/, ''), {}, function (res, err) {
   if (err || !res) { start(ALL_YEARS); return; }
   var names = (res.assets || []).map(function (a) { return a.name || a.id || ''; });
