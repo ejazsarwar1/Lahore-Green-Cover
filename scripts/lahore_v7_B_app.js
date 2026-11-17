@@ -888,13 +888,13 @@ var IS_PHONE = false;
 var titleLabel = ui.Label('City of Gardens?', {fontWeight: 'bold', fontSize: '26px',
   fontFamily: 'Georgia, serif', color: '#ffffff', backgroundColor: COL.dark, margin: '10px 8px 0 8px',
   textAlign: 'center', stretch: 'horizontal'});
-var subtitleLabel = ui.Label('Lahore gained lawns and lost fields, 2019\u20132025 ' +
-  '\u00b7 mapped from space every year at 10 m', {fontSize: '14px', color: '#d9ead3', backgroundColor: COL.dark,
+var subtitleLabel = ui.Label('Lawns up. Fields down. Trees still at 4%.', {fontSize: '16px', fontWeight: 'bold',
+  fontFamily: 'Georgia, serif', color: '#f2c45a', backgroundColor: COL.dark,
   margin: '4px 8px 2px 8px', textAlign: 'center', stretch: 'horizontal'});
 var bylineLabel = ui.Label('A study by Muhammad Ejaz Sarwar (PAS)',
   {fontSize: '12px', fontStyle: 'italic', color: '#cfe3cb', backgroundColor: COL.dark,
    margin: '2px 8px 2px 8px', textAlign: 'center', stretch: 'horizontal'});
-var storyLink = ui.Label('\u25b6  Read the visual story', {fontSize: '13px', fontWeight: 'bold', color: '#f2c45a',
+var storyLink = ui.Label('\u25b6  Read the visual story', {fontSize: '13px', fontWeight: 'bold', color: '#ffffff',
   backgroundColor: COL.dark, margin: '4px 8px 10px 8px', textAlign: 'center', stretch: 'horizontal'}, STORY_URL);
 var header = ui.Panel([titleLabel, subtitleLabel, bylineLabel, storyLink], null,
   {stretch: 'horizontal', backgroundColor: COL.dark, padding: '4px 0', margin: '0'});
@@ -2043,7 +2043,7 @@ function applyLayout(isPhone) {
   map.setControlVisibility({zoomControl: true, scaleControl: !isPhone, mapTypeControl: !isPhone,
     layerList: !isPhone, fullscreenControl: !isPhone, drawingToolsControl: false});
   titleLabel.style().set('fontSize', isPhone ? '21px' : '26px');
-  subtitleLabel.style().set('fontSize', isPhone ? '11px' : '13px');
+  subtitleLabel.style().set('fontSize', isPhone ? '14px' : '16px');
   bylineLabel.style().set('fontSize', isPhone ? '11px' : '12px');
   navLabels.forEach(function (n) { n.label.style().set(navLabelStyle(n.wide, isPhone)); });
   // phones: map on top, statistics below it two per row; desktop: statistics in a column on the right
