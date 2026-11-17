@@ -186,7 +186,7 @@ def slide2(maps):
               'of the district: about 2 points more', BRAND)
     top, bot, left, right = y + 330, H - 300, 130, W - 120
     vmax = 260
-    d.text((left, top - 46), 'km² of non-crop green (crops never counted)', SANS(24), MUTED)
+    d.text((left, top - 46), 'km² of non-crop green (crops are not counted as green)', SANS(24), MUTED)
     d.line([(left, bot), (right, bot)], LINE, 2)
     for v in (0, 100, 200):
         yy = bot - (bot - top) * v / vmax
@@ -231,8 +231,8 @@ def slide3(maps):
         d.text((W - 70, yy), '+%d points' % pts, SANS_B(28), C['trees'], anchor='ra')
         d.line([(70, yy + 42), (W - 70, yy + 42)], LINE, 1)
         yy += 50
-    text_block(d, (70, yy + 18), 'Fields were never counted, so grass, road green belts and lawns laid on former farmland '
-               'show up as new green.', SANS(26), MUTED, W - 140)
+    text_block(d, (70, yy + 18), 'Crop fields don’t count as green cover, so when a field becomes grass, a lawn or '
+               'a road green belt, it shows up as new green.', SANS(26), MUTED, W - 140)
     return im
 
 
