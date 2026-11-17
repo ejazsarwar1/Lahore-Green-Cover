@@ -1754,13 +1754,22 @@ function benchClick(coords) {
 // ---------------------------------------------------------------------
 // 6b. LAND BUDGET: every pixel split into six classes that add up to 100 %
 // ---------------------------------------------------------------------
-// Trees and grass keep the tested shares above; the rest of each pixel is shared among crops, built-up,
-// bare ground and water in proportion to Script C's class probabilities (assets lahore_v8_lc_YYYY).
+// Trees and grass keep the tested shares above; the rest of each pixel goes to whichever of crops, built-up,
+// bare ground and water Script C finds most likely there (assets lahore_v8_lc_YYYY). Sharing the rest in
+// proportion to the probabilities was tried first: small leftover probabilities spread over the whole
+// district and inflated water (124 km²) and bare ground (274 km²), so the rest now goes to one class.
 var LC_PREFIX = ASSET_FOLDER + 'lahore_v8_lc_';
 var LB = [['trees', 'Trees', '#1b7837'], ['grass', 'Grass, lawns, parks', '#a6d96a'],
           ['crops', 'Cropland', '#f1d581'], ['built', 'Built-up (grey)', '#8c8c8c'],
           ['bare', 'Bare ground', '#d9b38c'], ['water', 'Water', '#2b8cbe']];
-var CROP_TYPES = [[1, 'winter crop only (wheat)'], [2, 'summer crop only (rice)'], [3, 'two crops a year']];
+var CROP_TYPES = [[1, 'winter crop only (wheat season)'], [2, 'summer crop only (rice season)'],
+                  [3, 'two crops a year'], [0, 'calendar unclear (fodder, vegetables, fallow)']];
+var CROP_GREEN = 0.4;   // a season counts as cropped when its peak greenness reaches this
+var WHEAT_OFFICIAL_KM2 = 469;   // Lahore district wheat 2024-25: about 116,000 acres (Punjab Crop Reporting Service)
+function cropType(lc) {
+  var w = lc.select('rabi').divide(10000).gte(CROP_GREEN), s = lc.select('kharif').divide(10000).gte(CROP_GREEN);
+  return ee.Image(0).where(w.and(s.not()), 1).where(s.and(w.not()), 2).where(w.and(s), 3).rename('ct');
+}
 var ROAD_KM2 = 119.3, ROAD_LO = 89.4, ROAD_HI = 149.1;   // tools/road_area.py: OpenStreetMap 2026, widths +/-25 %
 var LC_OK = {};
 function checkLcAssets() {
@@ -1782,8 +1791,9 @@ function budgetImg(y) {
     .rename(['p_crops', 'p_built', 'p_bare', 'p_water']);
   var sum4 = p.reduce(ee.Reducer.sum());
   p = p.where(sum4.lt(0.05), fb);
-  p = p.divide(p.reduce(ee.Reducer.sum()).max(0.001));
-  return ee.Image.cat([t.rename('trees'), g.rename('grass'), p.multiply(rest).rename(['crops', 'built', 'bare', 'water'])])
+  var top = p.toArray().arrayArgmax().arrayGet(0);
+  var oneHot = ee.Image.cat([0, 1, 2, 3].map(function (i) { return top.eq(i); }));
+  return ee.Image.cat([t.rename('trees'), g.rename('grass'), oneHot.multiply(rest).rename(['crops', 'built', 'bare', 'water'])])
     .updateMask(lc.select('lc').mask()).clip(geom);
 }
 function dominantClass(b) { return b.toArray().arrayArgmax().arrayGet(0).rename('dom'); }
@@ -1845,8 +1855,9 @@ function renderBudget() {
     lbTable.setValue('Calculating (about 20–40 s)…');
     var lc = ee.Image(LC_PREFIX + y);
     var crops = b.select('crops');
+    var ct = cropType(lc);
     var stack = b.multiply(AREA).addBands(ee.Image.cat(CROP_TYPES.map(function (c) {
-      return crops.multiply(AREA).updateMask(lc.select('croptype').eq(c[0])).rename('ct' + c[0]);
+      return crops.multiply(AREA).updateMask(ct.eq(c[0])).rename('ct' + c[0]);
     })));
     var tot = stack.reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE,
       maxPixels: 1e11, tileScale: 4});
@@ -1877,6 +1888,10 @@ function showBudget(y, r) {
   var out = LB.map(function (c) { return line(c[1], t[c[0]] || 0); });
   var ct = CROP_TYPES.map(function (c) { return line(c[1], t['ct' + c[0]] || 0, true); });
   out.splice(3, 0, ct.join('\n'));
+  if (y === 2025) {
+    out.splice(4, 0, '    check: winter-season cropland ' + fmt((t.ct1 || 0) + (t.ct3 || 0), 0) +
+      ' km² vs official wheat area about ' + WHEAT_OFFICIAL_KM2 + ' km² (2024-25)');
+  }
   var built = t.built || 0, bld = Math.min(r.bld || 0, built);
   var road = Math.min(ROAD_KM2, Math.max(built - bld, 0));
   out.push('', 'Inside built-up (grey):',
