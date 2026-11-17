@@ -1468,9 +1468,7 @@ function methodsPanel() {
     'Feb\u2013Mar, rice in Aug\u2013Sep, fields are bare in May\u2013Jun and November), Sentinel-1 radar, Google Open ' +
     'Buildings and Dynamic World. It learns from places where ESA WorldCover, Dynamic World, OpenStreetMap and JRC ' +
     'water agree.\n' +
-    '\u2022 Cropland is split by season: green in winter (wheat season), in summer (rice season), or both.\n' +
-    '\u2022 The grey is split into buildings (Google Open Buildings), roads (OpenStreetMap road length \u00d7 a typical ' +
-    'width for each road type, about 119 km\u00b2, range 89\u2013149) and other paved land and yards.', PARA));
+    '\u2022 Cropland is split by season: green in winter (wheat season), in summer (rice season), or both.', PARA));
   p.add(ui.Label('How we checked the land budget', HEADING));
   var lbChecks = ui.Panel(null, null, {margin: '0 8px'});
   [['PASS', 'Held-out reference points', '98% agree on 1,904 held-out points. These are clear-cut places where ' +
@@ -1481,8 +1479,7 @@ function methodsPanel() {
       'wheat area of about 469 km\u00b2 (2024-25, Punjab Crop Reporting Service), as expected: wheat shares the ' +
       'winter season with fodder and vegetables.'],
    ['WARN', 'Bare ground', '197 km\u00b2, about twice Dynamic World\u2019s 100 km\u00b2. Some fallow fields are ' +
-      'probably counted as bare.'],
-   ['WARN', 'Roads', 'Estimated from typical widths, not measured; streets mapped in half-built schemes count.']
+      'probably counted as bare.']
   ].forEach(function (c) {
     lbChecks.add(ui.Panel([
       ui.Label(c[0] === 'PASS' ? '\u2714' : '!', {color: '#ffffff', backgroundColor: c[0] === 'PASS' ? '#2f7d4f' : '#b7791f',
@@ -1526,8 +1523,7 @@ function aboutPanel() {
     'built on former farmland: about 9% of Lahore’s farmland was lost to building between 2019 and 2025.\n' +
     '• Year-to-year changes are partly weather-related; the 2019–2025 increase is only just statistically ' +
     'significant, comes mostly from grass, and 7 years is a short record (details in "How We Know").\n' +
-    '\u2022 The land budget\u2019s bare ground (197 km\u00b2 in 2025) is probably over-counted, and roads are estimated ' +
-    'from typical widths (about 119 km\u00b2, range 89\u2013149).\n' +
+    '\u2022 The land budget\u2019s bare ground (197 km\u00b2 in 2025) is probably over-counted.\n' +
     '• Neighbourhood names are approximate reference points, not boundaries.\n' +
     '• The district outline is simplified (geoBoundaries).', PARA));
   p.add(ui.Label('Data sources', HEADING));
@@ -1538,7 +1534,6 @@ function aboutPanel() {
     '• Google Dynamic World, ESA WorldCover 2020 and 2021\n' +
     '• NASA GEDI canopy heights, Google Open Buildings 2.5D Temporal (independent checks)\n' +
     '\u2022 ESA / Copernicus Sentinel-1 radar (land budget)\n' +
-    '\u2022 OpenStreetMap road network (road area)\n' +
     '\u2022 Punjab Crop Reporting Service: district wheat area (check)\n' +
     '• JRC Global Surface Water, GHSL population, CHIRPS rainfall\n' +
     '• District boundary: geoBoundaries', PARA));
@@ -1842,7 +1837,6 @@ function cropType(lc) {
   var w = lc.select('rabi').divide(10000).gte(CROP_GREEN), s = lc.select('kharif').divide(10000).gte(CROP_GREEN);
   return ee.Image(0).where(w.and(s.not()), 1).where(s.and(w.not()), 2).where(w.and(s), 3).rename('ct');
 }
-var ROAD_KM2 = 119.3, ROAD_LO = 89.4, ROAD_HI = 149.1;   // tools/road_area.py: OpenStreetMap 2026, widths +/-25 %
 var LC_OK = {};
 function checkLcAssets() {
   ALL_YEARS.forEach(function (y) {
@@ -1869,11 +1863,6 @@ function budgetImg(y) {
     .updateMask(lc.select('lc').mask()).clip(geom);
 }
 function dominantClass(b) { return b.toArray().arrayArgmax().arrayGet(0).rename('dom'); }
-function buildingsPresence(y) {
-  return ee.ImageCollection(BUILDINGS_ID).filterBounds(geom)
-    .filterDate(ee.Date.fromYMD(Math.min(y, BUILDINGS_LAST), 1, 1), ee.Date.fromYMD(Math.min(y, BUILDINGS_LAST) + 1, 1, 1))
-    .select('building_presence').mosaic();
-}
 
 var lbYear = ui.Select({items: ALL_YEARS.map(String), placeholder: 'Year',
   onChange: function () { renderBudget(); }, style: {margin: '6px 4px'}});
@@ -1953,9 +1942,7 @@ function renderBudget() {
     })));
     var tot = stack.reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: STAT_SCALE,
       maxPixels: 1e11, tileScale: 4});
-    var bld = ee.Image.pixelArea().divide(1e6).updateMask(buildingsPresence(y).gte(0.5)).rename('bld')
-      .reduceRegion({reducer: ee.Reducer.sum(), geometry: geom, scale: 10, maxPixels: 1e11, tileScale: 8});
-    ee.Dictionary({tot: tot, bld: bld.get('bld')}).evaluate(function (r, err) {
+    ee.Dictionary({tot: tot}).evaluate(function (r, err) {
       if (id !== lbRequest) return;
       finishLoading();
       if (err) { lbTable.setValue('Error: ' + err); return; }
@@ -1976,16 +1963,11 @@ function showBudget(y, r) {
     pieSliceText: 'percentage', pieSliceTextStyle: {color: '#222', fontSize: 11}}));
   lbRows.clear();
   LB_SHOW.forEach(function (c) { lbRows.add(lbRow(c[2], c[1], t[c[0]] || 0, 100 * (t[c[0]] || 0) / all)); });
-  var built = t.built || 0, bld = Math.min(r.bld || 0, built);
-  var road = Math.min(ROAD_KM2, Math.max(built - bld, 0));
   lbParts.clear();
   lbParts.add(partsBar('Cropland by growing season', [['Two crops', t.ct3 || 0, '#8a5a00'],
     ['Winter only', t.ct1 || 0, '#c98714'], ['Summer only', t.ct2 || 0, '#e3b860'], ['Unclear', t.ct0 || 0, '#efdcae']]));
-  lbParts.add(partsBar('What the grey is', [['Buildings', bld, '#3f4550'], ['Roads', road, '#6b7280'],
-    ['Other paved, yards', Math.max(built - bld - road, 0), '#aab0b9']]));
-  lbTable.setValue('District total ' + fmt(all, 0) + ' km²' + (isProvisional(y) ? ' · ' + y + ' is provisional' : '') +
-    '. Roads are OpenStreetMap length × typical width (' + fmt(ROAD_LO, 0) + '–' + fmt(ROAD_HI, 0) +
-    ' km²); buildings are Google Open Buildings ' + Math.min(y, BUILDINGS_LAST) + '.');
+  lbTable.setValue('District total ' + fmt(all, 0) + ' km\u00b2' + (isProvisional(y) ? ' \u00b7 ' + y + ' is provisional' : '') +
+    '. Built-up (grey) is buildings, roads and paved land together.');
 }
 // where 2019 farmland went by the last complete year, from the largest class in each pixel
 function renderFlows() {

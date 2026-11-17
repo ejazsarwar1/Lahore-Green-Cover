@@ -377,12 +377,11 @@ var DATA = {
   // land budget (km², latest complete year); null until the corrected run is in
   budget: {year: 2025, trees: 70, grass: 171, built: 496, crops: 748, water: 11, bare: 197,
     sub: {crops: 'Most fields grow two crops a year: wheat in winter, rice in summer',
-          built: 'Buildings, roads, other paved land and yards',
+          built: 'The built city',
           bare: 'Cleared plots, building sites, brick kilns and the Ravi riverbed; probably over-counted (Dynamic World: about 100 km²)'},
     parts: {crops: [['Two crops a year', 603, '#8a5a00'], ['Winter only (wheat season)', 89, '#c98714'],
-                    ['Summer only (rice season)', 49, '#e3b860'], ['Unclear', 8, '#efdcae']],
-            built: [['Buildings', 178, '#3f4550'], ['Roads (about)', 119, '#6b7280'], ['Other paved and yards', 199, '#aab0b9']]},
-    note: 'Trees and grass are this study’s tested figures; the rest of each 10 m pixel goes to its most likely class. Roads: OpenStreetMap length × typical width (range 89–149 km²). Buildings: Google Open Buildings 2023.'},
+                    ['Summer only (rice season)', 49, '#e3b860'], ['Unclear', 8, '#efdcae']]},
+    note: 'Trees and grass are this study’s tested figures; the rest of each 10 m pixel goes to its most likely class.'},
   checks: [
     ['PASS', 'Clear images', 'At least 90% of the city clearly seen in every season'],
     ['PASS', 'Stable where nothing changed', 'Tree share varies by 4 points or less in protected forest and stable canopy'],
@@ -598,9 +597,8 @@ function drawBudget() {
   };
   host.innerHTML = '<div class="grid2"><div class="card"><div class="waffle" id="waffle">' + sq + '</div><p class="note">' + B.year + ' · 1 square = 1% of the district, about ' + fmt(total / 100) + ' km²</p></div>' +
     '<div class="card"><ul class="budget-list" id="blist">' + items + '</ul><p class="note">' + (B.note || '') + '</p></div></div>' +
-    '<div class="card" style="margin-top:20px"><h3 style="margin-bottom:14px">Inside the two biggest slices</h3><div class="grid2">' +
-    stack('Cropland, ' + fmt(B.crops) + ' km²: by growing season', 'crops', B.parts.crops) +
-    stack('Built-up, ' + fmt(B.built) + ' km²: what the grey is', 'built', B.parts.built) + '</div></div>';
+    '<div class="card" style="margin-top:20px"><h3 style="margin-bottom:14px">Inside the biggest slice</h3>' +
+    stack('Cropland, ' + fmt(B.crops) + ' km²: by growing season', 'crops', B.parts.crops) + '</div>';
   var waffle = document.getElementById('waffle');
   var light = function (k) {
     waffle.classList.toggle('dim', !!k);
