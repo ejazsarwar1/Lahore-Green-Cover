@@ -872,27 +872,31 @@ function pctTxt(x) { return (x >= 0 ? '+' : '') + fmt(x, 0) + '%'; }
 // 5. LAYOUT: header band, navigation panel, one content area per tab
 // ---------------------------------------------------------------------
 
-var COL = {dark: '#14532d', green: '#1b7837', light: '#eef5ec', line: '#cfe3cb', ink: '#212529',
-           muted: '#5f6b66', red: '#b2182b'};
+// Theme shared with the story site (docs/index.html): warm paper, deep green, wheat-gold accent
+var COL = {dark: '#14532d', green: '#1f6e3d', light: '#f6f3ea', line: '#e3ddcf', ink: '#14231d',
+           muted: '#6b756f', red: '#b4361f', accent: '#c98714'};
+var STORY_URL = 'https://ejazsarwar1.github.io/Lahore-Green-Cover/';
 var GREEN_TXT = COL.green, RED_TXT = COL.red;
 var SMALL = {fontSize: '12px', color: '#555', margin: '2px 8px'};
 var MONO = {whiteSpace: 'pre-wrap', fontSize: '12px', fontFamily: 'monospace', margin: '2px 8px'};
-var HEADING = {fontWeight: 'bold', fontSize: '16px', color: COL.dark, margin: '14px 8px 4px 8px'};
+var HEADING = {fontWeight: 'bold', fontSize: '18px', color: COL.dark, margin: '16px 8px 6px 8px',
+  fontFamily: 'Georgia, serif'};
 var PARA = {fontSize: '13px', color: '#333', margin: '4px 8px', whiteSpace: 'pre-wrap', maxWidth: '900px'};
 var IS_PHONE = false;
 
 // --- Header band
-var titleLabel = ui.Label('Lahore Non-Crop Green Cover, 2019–2026', {fontWeight: 'bold', fontSize: '22px',
-  color: '#ffffff', backgroundColor: COL.dark, margin: '8px 8px 0 8px', textAlign: 'center', stretch: 'horizontal'});
-var subtitleLabel = ui.Label('Trees, grass, lawns and parks mapped from space every year · crops excluded · ' +
-  'Sentinel-2 satellite images, 10 m', {fontSize: '13px', color: '#d9f0d3', backgroundColor: COL.dark,
+var titleLabel = ui.Label('Lahore, Slice by Slice', {fontWeight: 'bold', fontSize: '26px',
+  fontFamily: 'Georgia, serif', color: '#ffffff', backgroundColor: COL.dark, margin: '10px 8px 0 8px',
+  textAlign: 'center', stretch: 'horizontal'});
+var subtitleLabel = ui.Label('Trees, lawns, farmland and the grey city, mapped from space every year, 2019\u20132026 ' +
+  '\u00b7 Sentinel-2, 10 m', {fontSize: '13px', color: '#d9ead3', backgroundColor: COL.dark,
   margin: '4px 8px 2px 8px', textAlign: 'center', stretch: 'horizontal'});
-// author byline, linked to the project on GitHub
 var bylineLabel = ui.Label('A study by Muhammad Ejaz Sarwar (PAS)',
-  {fontSize: '12px', fontStyle: 'italic', color: '#a6dba0', backgroundColor: COL.dark,
-   margin: '2px 8px 8px 8px', textAlign: 'center', stretch: 'horizontal'},
-  'https://github.com/ejazsarwar1/Lahore-Green-Cover');
-var header = ui.Panel([titleLabel, subtitleLabel, bylineLabel], null,
+  {fontSize: '12px', fontStyle: 'italic', color: '#cfe3cb', backgroundColor: COL.dark,
+   margin: '2px 8px 2px 8px', textAlign: 'center', stretch: 'horizontal'});
+var storyLink = ui.Label('\u25b6  Read the visual story', {fontSize: '13px', fontWeight: 'bold', color: '#f2c45a',
+  backgroundColor: COL.dark, margin: '4px 8px 10px 8px', textAlign: 'center', stretch: 'horizontal'}, STORY_URL);
+var header = ui.Panel([titleLabel, subtitleLabel, bylineLabel, storyLink], null,
   {stretch: 'horizontal', backgroundColor: COL.dark, padding: '4px 0', margin: '0'});
 var status = ui.Label('Loading…', {fontSize: '12px', color: '#a15c00', margin: '4px 8px',
   textAlign: 'center', stretch: 'horizontal'});
@@ -901,17 +905,19 @@ function setStatus(text) {
   status.style().set('shown', !!text);
 }
 
-// --- Navigation tabs: a button with a bar underneath; the bar turns green on the open tab
-function chip(label, onClick) {
-  var btn = ui.Button({label: label, onClick: onClick, style: {margin: '0', fontSize: '13px'}});
-  var bar = ui.Label('', {height: '4px', padding: '0', margin: '1px 6px 0 6px', stretch: 'horizontal',
+// --- Navigation tabs: a button with a bar underneath. The open tab gets bold green text and a gold bar.
+// (Earth Engine draws the button face itself, so the text, size and the bar are what can be styled.)
+function chip(label, onClick, small) {
+  var btn = ui.Button({label: label, onClick: onClick,
+    style: {margin: '0', fontSize: small ? '12px' : '14px', padding: small ? '0' : '2px 4px', color: COL.ink}});
+  var bar = ui.Label('', {height: '4px', padding: '0', margin: '2px 8px 0 8px', stretch: 'horizontal',
     backgroundColor: COL.light});
-  var wrap = ui.Panel([btn, bar], null, {padding: '0', margin: '2px 3px', backgroundColor: COL.light});
+  var wrap = ui.Panel([btn, bar], null, {padding: '0', margin: small ? '2px 2px' : '4px 3px', backgroundColor: COL.light});
   return {wrap: wrap, btn: btn, bar: bar};
 }
 function setChip(c, on) {
-  c.bar.style().set('backgroundColor', on ? COL.green : COL.light);
-  c.btn.style().set({fontWeight: on ? 'bold' : 'normal', color: on ? COL.green : COL.ink});
+  c.bar.style().set('backgroundColor', on ? COL.accent : COL.light);
+  c.btn.style().set({fontWeight: on ? 'bold' : 'normal', color: on ? COL.dark : COL.muted});
 }
 var navLabels = [];
 // phones: each row's name sits on its own line above its buttons; desktop: a fixed column (wider if 'wide')
@@ -935,30 +941,39 @@ var yearChips = {};
 var yearRow = navRow([]);
 var areaSelect = ui.Select({items: ['All of Lahore'].concat(PLACES.map(function (p) { return p[0]; })),
   value: 'All of Lahore', onChange: function (v) { zoomTo(v); }, style: {margin: '4px 4px'}});
-var changeChip = chip('Change \u2192', function () { setMode('change'); });
-var timelapseChip = chip('Timelapse', function () { setMode('timelapse'); });
-var benchChip = chip('Lahore vs Benchmarks', function () { setMode('bench'); });
-var budgetChip = chip('Land Budget', function () { setMode('budget'); });
-var howChip = chip('How We Know', function () { setMode('methods'); });
-var aboutChip = chip('About & Data', function () { setMode('about'); });
-var exploreRow = navRow([navLabel('Explore'), changeChip.wrap, timelapseChip.wrap, benchChip.wrap, budgetChip.wrap]);
+// One row of chapter tabs (the same chapters as the story site), then a row of options for the open tab
+var greenChip = chip('\ud83c\udf33 Green cover', function () { setMode('year'); });
+var changeChip = chip('\u21c4 What changed', function () { setMode('change'); });
+var budgetChip = chip('\u25d4 Land budget', function () { setMode('budget'); });
+var benchChip = chip('\ud83d\udccf Green for whom?', function () { setMode('bench'); });
+var timelapseChip = chip('\u25b6 Timelapse', function () { setMode('timelapse'); });
+var howChip = chip('\u2714 How we know', function () { setMode('methods'); });
+var aboutChip = chip('\u24d8 About', function () { setMode('about'); });
+var tabRow = navRow([greenChip.wrap, changeChip.wrap, budgetChip.wrap, benchChip.wrap, timelapseChip.wrap,
+  howChip.wrap, aboutChip.wrap]);
 var zoomRow = navRow([navLabel('Zoom to neighbourhood', true), areaSelect]);
-var learnRow = navRow([navLabel('Learn more'), howChip.wrap, aboutChip.wrap]);
-var nav = ui.Panel([yearRow, exploreRow, zoomRow, learnRow], null, {backgroundColor: COL.light, stretch: 'horizontal',
-  margin: '0 0 6px 0', padding: '4px 0', border: '1px solid ' + COL.line});
+var options = ui.Panel([yearRow, zoomRow], null, {backgroundColor: COL.light, stretch: 'horizontal', margin: '0',
+  padding: '0 0 4px 0'});
+var nav = ui.Panel([tabRow, options], null, {backgroundColor: COL.light, stretch: 'horizontal',
+  margin: '0 0 6px 0', padding: '4px 6px', border: '1px solid ' + COL.line});
 
 function styleNav() {
   Object.keys(yearChips).forEach(function (k) {
     var on = mode === 'year' && Number(k) === selectedYear;
     setChip(yearChips[k], on);
   });
+  setChip(greenChip, mode === 'year');
   setChip(changeChip, mode === 'change');
   setChip(timelapseChip, mode === 'timelapse');
   setChip(benchChip, mode === 'bench');
   setChip(budgetChip, mode === 'budget');
   setChip(howChip, mode === 'methods');
   setChip(aboutChip, mode === 'about');
-  changeChip.btn.setLabel('Change ' + chFrom.getValue() + ' → ' + chTo.getValue());
+  // options row: years only on the green-cover tab, the neighbourhood list on every map tab
+  var mapTab = ['year', 'change', 'bench', 'budget'].indexOf(mode) >= 0;
+  yearRow.style().set('shown', mode === 'year');
+  zoomRow.style().set('shown', mapTab);
+  options.style().set('shown', mapTab);
 }
 
 // --- Map (shared by the yearly view and the change view)
@@ -1004,10 +1019,13 @@ function ctrlLabel(text) {
 
 // --- Key-number cards, stacked in a column to the right of the map
 function makeCard(caption, colour) {
-  var num = ui.Label('\u2013', {fontSize: '24px', fontWeight: 'bold', color: colour || COL.ink, margin: '0'});
-  var cap = ui.Label(caption, {fontSize: '12px', color: '#666', margin: '2px 0 0 0'});
-  var p = ui.Panel([num, cap], null, {border: '1px solid #ddd', padding: '8px 12px', margin: '4px 0',
-    stretch: 'horizontal', backgroundColor: '#ffffff'});
+  var stripe = ui.Label('', {height: '4px', padding: '0', margin: '0 0 6px 0', stretch: 'horizontal',
+    backgroundColor: colour || COL.dark});
+  var num = ui.Label('\u2013', {fontSize: '26px', fontWeight: 'bold', fontFamily: 'Georgia, serif',
+    color: colour || COL.ink, margin: '0'});
+  var cap = ui.Label(caption, {fontSize: '12px', color: COL.muted, margin: '2px 0 0 0'});
+  var p = ui.Panel([stripe, num, cap], null, {border: '1px solid ' + COL.line, padding: '0 12px 10px 12px',
+    margin: '5px 0', stretch: 'horizontal', backgroundColor: '#ffffff'});
   return {panel: p, num: num, cap: cap};
 }
 var cTrees = makeCard('Tree cover', COL.green), cGrass = makeCard('Grass, lawns, parks', '#5a8f00');
@@ -1165,7 +1183,7 @@ function buildTabs() {
   yearChips = {};
   yearRow.add(navLabel('Year'));
   ALL_YEARS.forEach(function (yr) {
-    var c = chip(String(yr) + (isProvisional(yr) ? '*' : ''), function () { selectedYear = yr; setMode('year'); });
+    var c = chip(String(yr) + (isProvisional(yr) ? '*' : ''), function () { selectedYear = yr; setMode('year'); }, true);
     c.btn.setDisabled(!has(yr));
     yearChips[yr] = c;
     yearRow.add(c.wrap);
@@ -1759,9 +1777,13 @@ function benchClick(coords) {
 // proportion to the probabilities was tried first: small leftover probabilities spread over the whole
 // district and inflated water (124 km²) and bare ground (274 km²), so the rest now goes to one class.
 var LC_PREFIX = ASSET_FOLDER + 'lahore_v8_lc_';
-var LB = [['trees', 'Trees', '#1b7837'], ['grass', 'Grass, lawns, parks', '#a6d96a'],
-          ['crops', 'Cropland', '#f1d581'], ['built', 'Built-up (grey)', '#8c8c8c'],
-          ['bare', 'Bare ground', '#d9b38c'], ['water', 'Water', '#2b8cbe']];
+var LB = [['trees', 'Trees', '#1f6e3d'], ['grass', 'Grass, lawns, parks', '#9cc44a'],
+          ['crops', 'Cropland', '#c98714'], ['built', 'Built-up (grey)', '#6b7280'],
+          ['bare', 'Bare ground', '#c0573a'], ['water', 'Water', '#2f8ad0']];   // band order of budgetImg
+// display order shared with the story site (checked for colour-blind separation between neighbours)
+var LB_SHOW = ['trees', 'grass', 'built', 'crops', 'water', 'bare'].map(function (k) {
+  return LB.filter(function (c) { return c[0] === k; })[0];
+});
 var CROP_TYPES = [[1, 'winter crop only (wheat season)'], [2, 'summer crop only (rice season)'],
                   [3, 'two crops a year'], [0, 'calendar unclear (fodder, vegetables, fallow)']];
 var CROP_GREEN = 0.4;   // a season counts as cropped when its peak greenness reaches this
@@ -1876,20 +1898,20 @@ function renderBudget() {
 function showBudget(y, r) {
   var t = r.tot, all = 0;
   LB.forEach(function (c) { all += t[c[0]] || 0; });
-  var rows = [['Class', 'km²']];
-  LB.forEach(function (c) { rows.push([c[1], Math.round((t[c[0]] || 0) * 10) / 10]); });
+  var rows = [['Class', 'km\u00b2']];
+  LB_SHOW.forEach(function (c) { rows.push([c[1], Math.round((t[c[0]] || 0) * 10) / 10]); });
   lbChart.clear();
-  lbChart.add(ui.Chart(rows, 'PieChart', {colors: LB.map(function (c) { return c[2]; }), pieHole: 0.45,
+  lbChart.add(ui.Chart(rows, 'PieChart', {colors: LB_SHOW.map(function (c) { return c[2]; }), pieHole: 0.45,
     legend: {position: 'none'}, chartArea: {left: 8, right: 8, top: 8, bottom: 8}, height: 210,
     pieSliceText: 'percentage', pieSliceTextStyle: {color: '#222', fontSize: 11}}));
   var line = function (label, km, indent) {
     return (indent ? '    ' : '') + label + ': ' + fmt(km, 0) + ' km² (' + fmt(100 * km / all, 1) + '%)';
   };
-  var out = LB.map(function (c) { return line(c[1], t[c[0]] || 0); });
+  var out = LB_SHOW.map(function (c) { return line(c[1], t[c[0]] || 0); });
   var ct = CROP_TYPES.map(function (c) { return line(c[1], t['ct' + c[0]] || 0, true); });
-  out.splice(3, 0, ct.join('\n'));
+  out.splice(4, 0, ct.join('\n'));   // after Cropland (4th in display order)
   if (y === 2025) {
-    out.splice(4, 0, '    check: winter-season cropland ' + fmt((t.ct1 || 0) + (t.ct3 || 0), 0) +
+    out.splice(5, 0, '    check: winter-season cropland ' + fmt((t.ct1 || 0) + (t.ct3 || 0), 0) +
       ' km² vs official wheat area about ' + WHEAT_OFFICIAL_KM2 + ' km² (2024-25)');
   }
   var built = t.built || 0, bld = Math.min(r.bld || 0, built);
@@ -1969,7 +1991,7 @@ function applyLayout(isPhone) {
   map.style().set('height', isPhone ? '380px' : MAP_HEIGHT);
   map.setControlVisibility({zoomControl: true, scaleControl: !isPhone, mapTypeControl: !isPhone,
     layerList: !isPhone, fullscreenControl: !isPhone, drawingToolsControl: false});
-  titleLabel.style().set('fontSize', isPhone ? '17px' : '22px');
+  titleLabel.style().set('fontSize', isPhone ? '21px' : '26px');
   subtitleLabel.style().set('fontSize', isPhone ? '11px' : '13px');
   bylineLabel.style().set('fontSize', isPhone ? '11px' : '12px');
   navLabels.forEach(function (n) { n.label.style().set(navLabelStyle(n.wide, isPhone)); });
