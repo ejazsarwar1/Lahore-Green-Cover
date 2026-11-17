@@ -1450,13 +1450,47 @@ function methodsPanel() {
   verdict.style().set({backgroundColor: '#fff6e5', border: '1px solid #f0d9a8', padding: '8px 10px'});
   p.add(verdict);
   if (PUBLIC_MODE) {
-    p.add(ui.Label('Results of the last full run (October 2026):', PARA));
+    p.add(ui.Label('Results of the last full run (November 2026):', PARA));
   } else {
     p.add(ui.Button({label: 'Run all checks', onClick: runAll}));
   }
   p.add(scorePanel);
   p.add(detailHolder);
   if (PUBLIC_MODE) showSavedChecks();
+  // ---- the land budget: how it is made and how it was checked
+  p.add(ui.Label('How the land budget is made', HEADING));
+  p.add(ui.Label(
+    '\u2022 Every 10 m pixel is split into six kinds of land that add up to 100%: trees, grass/lawns/parks, ' +
+    'cropland, built-up (grey), bare ground and water.\n' +
+    '\u2022 Trees and grass keep the tested shares above. The rest of the pixel goes to whichever of cropland, ' +
+    'built-up, bare ground or water a second model finds most likely.\n' +
+    '\u2022 That model (Script C) reads crop calendars from six two-month Sentinel-2 images a year (wheat peaks in ' +
+    'Feb\u2013Mar, rice in Aug\u2013Sep, fields are bare in May\u2013Jun and November), Sentinel-1 radar, Google Open ' +
+    'Buildings and Dynamic World. It learns from places where ESA WorldCover, Dynamic World, OpenStreetMap and JRC ' +
+    'water agree.\n' +
+    '\u2022 Cropland is split by season: green in winter (wheat season), in summer (rice season), or both.\n' +
+    '\u2022 The grey is split into buildings (Google Open Buildings), roads (OpenStreetMap road length \u00d7 a typical ' +
+    'width for each road type, about 119 km\u00b2, range 89\u2013149) and other paved land and yards.', PARA));
+  p.add(ui.Label('How we checked the land budget', HEADING));
+  var lbChecks = ui.Panel(null, null, {margin: '0 8px'});
+  [['PASS', 'Held-out reference points', '98% agree on 1,904 held-out points. These are clear-cut places where ' +
+      'other maps agree, so this shows the model is consistent, not that the whole map is 98% right.'],
+   ['PASS', 'Farmland lost, two methods', 'The crop check found 41 km\u00b2 of 2019 farmland built on by 2025; ' +
+      'the land budget finds 51 km\u00b2. Both show the city growing over its fields.'],
+   ['PASS', 'Official wheat area', '692 km\u00b2 of winter-season cropland in 2025, more than the official ' +
+      'wheat area of about 469 km\u00b2 (2024-25, Punjab Crop Reporting Service), as expected: wheat shares the ' +
+      'winter season with fodder and vegetables.'],
+   ['WARN', 'Bare ground', '197 km\u00b2, about twice Dynamic World\u2019s 100 km\u00b2. Some fallow fields are ' +
+      'probably counted as bare.'],
+   ['WARN', 'Roads', 'Estimated from typical widths, not measured; streets mapped in half-built schemes count.']
+  ].forEach(function (c) {
+    lbChecks.add(ui.Panel([
+      ui.Label(c[0] === 'PASS' ? '\u2714' : '!', {color: '#ffffff', backgroundColor: c[0] === 'PASS' ? '#2f7d4f' : '#b7791f',
+        fontWeight: 'bold', padding: '2px 8px', margin: '4px 10px 0 0'}),
+      ui.Label(c[1] + ': ' + c[2], {fontSize: '13px', margin: '4px 0', whiteSpace: 'pre-wrap', maxWidth: '760px'})
+    ], ui.Panel.Layout.flow('horizontal'), {margin: '2px 0'}));
+  });
+  p.add(lbChecks);
   return p;
 }
 
@@ -1467,9 +1501,20 @@ function aboutPanel() {
   ABOUT_PANEL = p;
   p.add(ui.Label('About this map', HEADING));
   p.add(ui.Label(
-    'This app maps Lahore’s non-crop green cover – trees, grass, lawns, shrubs and parks – for every year ' +
-    'from 2019 to 2026, and shows where it changed. It is a research estimate built from free satellite data, ' +
-    'not an official statistic.', PARA));
+    'This app maps Lahore\u2019s land from space for every year from 2019 to 2026: its non-crop green cover (trees, ' +
+    'grass, lawns and parks), and, in the land budget, every other kind of land too: cropland, the grey city of ' +
+    'buildings and roads, bare ground and water. It is a research estimate built from free satellite data, not ' +
+    'an official statistic.', PARA));
+  p.add(ui.Label('What each tab shows', HEADING));
+  p.add(ui.Label(
+    '\u2022 Green cover: trees and grass for any year, with the district totals.\n' +
+    '\u2022 What changed: where green was gained or lost between two years.\n' +
+    '\u2022 Land budget: the whole district in six kinds of land, cropland by season, what the grey is made of, ' +
+    'and where 2019 farmland went.\n' +
+    '\u2022 Green for whom?: Lahore against the 3-30-300 rule, green per resident and park access, by neighbourhood.\n' +
+    '\u2022 Timelapse, How we know (methods and checks) and this page.', PARA));
+  p.add(ui.Label('\u25b6  Read the visual story: the findings in five short chapters', {fontSize: '14px',
+    fontWeight: 'bold', color: COL.dark, margin: '8px 8px'}, STORY_URL));
   p.add(ui.Label('What to keep in mind', HEADING));
   p.add(ui.Label(
     '• 2026 is provisional: the year is not complete yet.\n' +
@@ -1481,6 +1526,8 @@ function aboutPanel() {
     'built on former farmland: about 9% of Lahore’s farmland was lost to building between 2019 and 2025.\n' +
     '• Year-to-year changes are partly weather-related; the 2019–2025 increase is only just statistically ' +
     'significant, comes mostly from grass, and 7 years is a short record (details in "How We Know").\n' +
+    '\u2022 The land budget\u2019s bare ground (197 km\u00b2 in 2025) is probably over-counted, and roads are estimated ' +
+    'from typical widths (about 119 km\u00b2, range 89\u2013149).\n' +
     '• Neighbourhood names are approximate reference points, not boundaries.\n' +
     '• The district outline is simplified (geoBoundaries).', PARA));
   p.add(ui.Label('Data sources', HEADING));
@@ -1490,6 +1537,9 @@ function aboutPanel() {
     '• OpenStreetMap contributors (parks, lawns, golf courses, forests) – ODbL\n' +
     '• Google Dynamic World, ESA WorldCover 2020 and 2021\n' +
     '• NASA GEDI canopy heights, Google Open Buildings 2.5D Temporal (independent checks)\n' +
+    '\u2022 ESA / Copernicus Sentinel-1 radar (land budget)\n' +
+    '\u2022 OpenStreetMap road network (road area)\n' +
+    '\u2022 Punjab Crop Reporting Service: district wheat area (check)\n' +
     '• JRC Global Surface Water, GHSL population, CHIRPS rainfall\n' +
     '• District boundary: geoBoundaries', PARA));
   return p;
@@ -1827,17 +1877,37 @@ function buildingsPresence(y) {
 
 var lbYear = ui.Select({items: ALL_YEARS.map(String), placeholder: 'Year',
   onChange: function () { renderBudget(); }, style: {margin: '6px 4px'}});
+// Side panel: a donut, one short row per class, and one stacked bar each for cropland and the grey city
 var lbChart = ui.Panel(null, null, {margin: '0'});
-var lbTable = ui.Label('', {fontSize: '12px', color: '#333', margin: '6px 0', whiteSpace: 'pre-wrap'});
-var budgetCards = ui.Panel([lbChart, lbTable], null, {margin: '0'});
+var lbRows = ui.Panel(null, null, {margin: '0'});
+var lbParts = ui.Panel(null, null, {margin: '0'});
+var lbTable = ui.Label('', {fontSize: '12px', color: COL.muted, margin: '6px 0', whiteSpace: 'pre-wrap'});
+var budgetCards = ui.Panel([lbChart, lbRows, lbParts, lbTable], null, {margin: '0'});
+function lbRow(colour, name, km, pct, strong) {
+  return ui.Panel([
+    ui.Label('', {backgroundColor: colour, padding: '7px', margin: '5px 8px 0 0'}),
+    ui.Label(name, {fontSize: '13px', margin: '3px 0', width: '118px', fontWeight: strong ? 'bold' : 'normal'}),
+    ui.Label(fmt(km, 0) + ' km²', {fontSize: '13px', fontWeight: 'bold', margin: '3px 4px', width: '62px',
+      textAlign: 'right'}),
+    ui.Label(fmt(pct, 0) + '%', {fontSize: '13px', color: COL.muted, margin: '3px 0', width: '34px', textAlign: 'right'})
+  ], ui.Panel.Layout.flow('horizontal'), {margin: '0', padding: '0'});
+}
+// one horizontal 100% bar with its parts; the legend names each part with its km²
+function partsBar(title, parts) {
+  var head = [''].concat(parts.map(function (p) { return p[0] + ' ' + fmt(p[1], 0); }));
+  var row = [''].concat(parts.map(function (p) { return Math.round(p[1]); }));
+  return ui.Panel([
+    ui.Label(title, {fontSize: '13px', fontWeight: 'bold', color: COL.ink, margin: '10px 0 0 0'}),
+    ui.Chart([head, row], 'BarChart', {isStacked: true, colors: parts.map(function (p) { return p[2]; }), height: 120,
+      legend: {position: 'bottom', maxLines: 3, textStyle: {fontSize: 11}}, hAxis: {textPosition: 'none',
+      gridlines: {count: 0}}, vAxis: {textPosition: 'none'}, bar: {groupWidth: '80%'},
+      chartArea: {left: 4, right: 4, top: 4, height: 32}})
+  ], null, {margin: '0'});
+}
 var lbFlows = ui.Panel(null, null, {margin: '4px 8px'});
 var lbNote = ui.Label(
-  'How it is made: trees and grass are the tested shares used everywhere in this app. The rest of each 10 m ' +
-  'pixel is shared among cropland, built-up, bare ground and water using a second model (Sentinel-2 crop ' +
-  'calendars, Sentinel-1 radar, Google Open Buildings and Dynamic World), so the six classes add up to the whole ' +
-  'district. Roads are OpenStreetMap road lengths times typical widths for each road type. Buildings are Google ' +
-  'Open Buildings (latest year 2023). These are model estimates checked against independent data, not survey ' +
-  'figures; the map shows the largest class in each pixel.', SMALL);
+  'Every 10 m of the district is split into six kinds of land that add up to 100%. Model estimates checked ' +
+  'against independent data, not survey figures; how it is made and checked is in "How we know".', SMALL);
 function lbLegend() {
   var p = ui.Panel(null, null, {padding: '6px 8px', backgroundColor: 'rgba(255,255,255,0.94)',
     width: IS_PHONE ? 'auto' : '190px'});
@@ -1861,7 +1931,7 @@ function renderBudget() {
   sideTitle.setValue('Lahore’s land, ' + y);
   if (!lcReady(y)) {
     map.layers().reset(contextLayers());
-    lbChart.clear();
+    lbChart.clear(); lbRows.clear(); lbParts.clear();
     lbTable.setValue('The land budget for ' + y + ' is not available yet (Script C asset lahore_v8_lc_' + y +
       ' is missing or not shared).');
     return;
@@ -1873,7 +1943,7 @@ function renderBudget() {
   if (LB_CACHE[y]) { showBudget(y, LB_CACHE[y]); } else {
     var id = ++lbRequest;
     startLoading('Loading the land budget');
-    lbChart.clear();
+    lbChart.clear(); lbRows.clear(); lbParts.clear();
     lbTable.setValue('Calculating (about 20–40 s)…');
     var lc = ee.Image(LC_PREFIX + y);
     var crops = b.select('crops');
@@ -1904,25 +1974,18 @@ function showBudget(y, r) {
   lbChart.add(ui.Chart(rows, 'PieChart', {colors: LB_SHOW.map(function (c) { return c[2]; }), pieHole: 0.45,
     legend: {position: 'none'}, chartArea: {left: 8, right: 8, top: 8, bottom: 8}, height: 210,
     pieSliceText: 'percentage', pieSliceTextStyle: {color: '#222', fontSize: 11}}));
-  var line = function (label, km, indent) {
-    return (indent ? '    ' : '') + label + ': ' + fmt(km, 0) + ' km² (' + fmt(100 * km / all, 1) + '%)';
-  };
-  var out = LB_SHOW.map(function (c) { return line(c[1], t[c[0]] || 0); });
-  var ct = CROP_TYPES.map(function (c) { return line(c[1], t['ct' + c[0]] || 0, true); });
-  out.splice(4, 0, ct.join('\n'));   // after Cropland (4th in display order)
-  if (y === 2025) {
-    out.splice(5, 0, '    check: winter-season cropland ' + fmt((t.ct1 || 0) + (t.ct3 || 0), 0) +
-      ' km² vs official wheat area about ' + WHEAT_OFFICIAL_KM2 + ' km² (2024-25)');
-  }
+  lbRows.clear();
+  LB_SHOW.forEach(function (c) { lbRows.add(lbRow(c[2], c[1], t[c[0]] || 0, 100 * (t[c[0]] || 0) / all)); });
   var built = t.built || 0, bld = Math.min(r.bld || 0, built);
   var road = Math.min(ROAD_KM2, Math.max(built - bld, 0));
-  out.push('', 'Inside built-up (grey):',
-    line('buildings (Open Buildings ' + Math.min(y, BUILDINGS_LAST) + ')', bld, true),
-    '    roads (OpenStreetMap 2026): about ' + fmt(road, 0) + ' km² (range ' + fmt(ROAD_LO, 0) + '–' +
-      fmt(ROAD_HI, 0) + ')',
-    line('other paved and yards', Math.max(built - bld - road, 0), true),
-    '', 'District total: ' + fmt(all, 0) + ' km²' + (isProvisional(y) ? ' · ' + y + ' is provisional' : ''));
-  lbTable.setValue(out.join('\n'));
+  lbParts.clear();
+  lbParts.add(partsBar('Cropland by growing season', [['Two crops', t.ct3 || 0, '#8a5a00'],
+    ['Winter only', t.ct1 || 0, '#c98714'], ['Summer only', t.ct2 || 0, '#e3b860'], ['Unclear', t.ct0 || 0, '#efdcae']]));
+  lbParts.add(partsBar('What the grey is', [['Buildings', bld, '#3f4550'], ['Roads', road, '#6b7280'],
+    ['Other paved, yards', Math.max(built - bld - road, 0), '#aab0b9']]));
+  lbTable.setValue('District total ' + fmt(all, 0) + ' km²' + (isProvisional(y) ? ' · ' + y + ' is provisional' : '') +
+    '. Roads are OpenStreetMap length × typical width (' + fmt(ROAD_LO, 0) + '–' + fmt(ROAD_HI, 0) +
+    ' km²); buildings are Google Open Buildings ' + Math.min(y, BUILDINGS_LAST) + '.');
 }
 // where 2019 farmland went by the last complete year, from the largest class in each pixel
 function renderFlows() {
@@ -1952,22 +2015,28 @@ function showFlows(y0, y1, r) {
   var rows = [['Class', String(y0), String(y1)]];
   LB.forEach(function (c) { rows.push([c[1], Math.round(r.t0[c[0]]), Math.round(r.t1[c[0]])]); });
   var farm = from(2);
-  var lines = LB.map(function (c, j) {
-    return '    ' + c[1].toLowerCase() + ': ' + fmt(m[20 + j] || 0, 1) + ' km² (' +
-      fmt(100 * (m[20 + j] || 0) / farm, 1) + '%)';
-  });
   var gainBuilt = 0;
   for (var i = 0; i < 6; i++) if (i !== 3) gainBuilt += m[i * 10 + 3] || 0;
+  // three headline numbers, then two charts
+  var big = function (num, text, colour) {
+    var c = makeCard(text, colour);
+    c.num.setValue(num);
+    c.panel.style().set({width: IS_PHONE ? '92%' : '30%', margin: '4px 1%'});
+    return c.panel;
+  };
   lbFlows.clear();
   lbFlows.add(ui.Label('Where the land went, ' + y0 + ' → ' + y1, HEADING));
-  lbFlows.add(ui.Chart(rows, 'ColumnChart', {colors: ['#bdbdbd', '#1b7837'], height: 260,
-    vAxis: {title: 'km²', gridlines: {color: '#eee'}}, legend: {position: 'top'},
-    chartArea: {left: 60, right: 15, top: 30, bottom: 60}}));
-  lbFlows.add(ui.Label(
-    'Cropland in ' + y0 + ' (largest class): ' + fmt(farm, 0) + ' km². By ' + y1 + ' it was:\n' + lines.join('\n') +
-    '\nNew built-up land ' + y0 + '–' + y1 + ': ' + fmt(gainBuilt, 0) + ' km², of which ' +
-    fmt(100 * (m[23] || 0) / Math.max(gainBuilt, 1e-6), 0) + '% was cropland in ' + y0 + '.\n' +
-    'Pixel-by-pixel change of the largest class exaggerates small shifts, so read these as approximate.', MONO));
+  lbFlows.add(ui.Panel([
+    big(fmt(m[23] || 0, 0) + ' km²', 'of ' + y0 + ' cropland was built-up by ' + y1, '#6b7280'),
+    big(fmt(m[24] || 0, 0) + ' km²', 'of ' + y0 + ' cropland was cleared bare by ' + y1, '#c0573a'),
+    big(fmt(100 * (m[23] || 0) / Math.max(gainBuilt, 1e-6), 0) + '%', 'of all new built-up land (' +
+      fmt(gainBuilt, 0) + ' km²) was cropland in ' + y0, '#c98714')
+  ], wrapRow(), {margin: '0'}));
+  lbFlows.add(ui.Chart(rows, 'BarChart', {title: 'Each kind of land, ' + y0 + ' and ' + y1 + ' (km²)',
+    titleTextStyle: {fontSize: 13, bold: true, color: COL.ink}, colors: ['#cfc7b5', COL.dark], height: 300,
+    hAxis: {gridlines: {color: '#eee'}, viewWindow: {min: 0}}, legend: {position: 'top'},
+    chartArea: {left: 130, right: 20, top: 50, bottom: 30}}));
+  lbFlows.add(ui.Label('Approximate: compares the largest class in each 10 m pixel in the two years.', SMALL));
 }
 function budgetClick(coords) {
   var y = Number(lbYear.getValue());

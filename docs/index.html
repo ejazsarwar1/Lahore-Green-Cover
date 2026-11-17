@@ -90,15 +90,18 @@ details.table table { border-collapse: collapse; margin-top: 8px; width: 100%; }
 details.table td, details.table th { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: right; }
 details.table th:first-child, details.table td:first-child { text-align: left; }
 
-/* before / after slider */
-.compare { position: relative; user-select: none; touch-action: pan-y; }
-.compare img { width: 100%; }
-.compare .after { position: absolute; inset: 0; clip-path: inset(0 0 0 50%); }
-.compare .handle { position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; background: var(--ink); transform: translateX(-1px); }
-.compare .handle::after { content: '\2194'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
-.compare .tag { position: absolute; top: 8px; padding: 4px 12px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 700; font-size: 14px; }
-.compare .tag.l { left: 8px; } .compare .tag.r { right: 8px; }
-.compare input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; margin: 0; }
+/* 2019 / 2025 map switch */
+.switch { display: inline-flex; gap: 4px; padding: 4px; background: #ece6d8; border-radius: 999px; margin-bottom: 12px; }
+.switch button { border: 0; background: transparent; padding: 8px 18px; border-radius: 999px; font: 700 15px Inter, sans-serif; color: var(--ink-2); cursor: pointer; }
+.switch button.on { background: var(--brand); color: #fff; }
+.switch #play { color: var(--brand-2); }
+.flip { position: relative; }
+.flip img { width: 100%; transition: opacity .5s; }
+.flip img + img { position: absolute; inset: 0; }
+.flip img:not(.on) { opacity: 0; }
+.flip-stat { position: absolute; left: 6px; bottom: 6px; background: rgba(255,253,248,.94); border-radius: 12px; padding: 8px 14px; box-shadow: var(--shadow); }
+.flip-stat b { display: block; font: 800 26px Fraunces, serif; color: var(--brand); }
+.flip-stat span { font-size: 13px; color: var(--ink-2); }
 
 /* lists */
 .rank { list-style: none; padding: 0; margin: 0; }
@@ -117,6 +120,12 @@ details.table th:first-child, details.table td:first-child { text-align: left; }
 .budget-list .km { font-weight: 700; font-variant-numeric: tabular-nums; }
 .budget-list .pc { color: var(--muted); font-variant-numeric: tabular-nums; width: 52px; text-align: right; }
 .budget-list .sub { grid-column: 2 / 5; font-size: 13px; color: var(--muted); }
+.stack .dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; }
+.stack .bar { display: flex; gap: 2px; height: 34px; border-radius: 8px; overflow: hidden; margin: 10px 0; }
+.stack .seg { min-width: 3px; }
+.stack .keys { display: grid; gap: 6px; font-size: 14px; color: var(--ink-2); }
+.stack .keys i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; }
+.stack .keys b { color: var(--ink); }
 .pending { padding: 28px; border: 2px dashed var(--line); border-radius: var(--radius); color: var(--muted); text-align: center; }
 
 /* bullets */
@@ -211,14 +220,15 @@ footer { padding: 40px 0 60px; font-size: 13px; color: var(--muted); }
           <div class="callout"><b>Is it a real trend?</b> Only just. The trend is +5.0 km² a year, with a 95% confidence interval of +0.05 to +7.9. It comes from grass; the tree trend is not significant. Seven years is a short record, and wet years are greener.</div>
         </div>
         <div class="card">
-          <p class="chart-title">Drag to compare 2019 and 2025</p>
+          <p class="chart-title">Switch between 2019 and 2025</p>
           <p class="chart-sub">Dark green: trees · light green: grass, lawns, parks · grey: built-up · cream: farmland</p>
-          <div class="compare" id="compare">
-            <img src="img/map_2019.webp" alt="Map of Lahore's green cover in 2019">
-            <img class="after" src="img/map_2025.webp" alt="Map of Lahore's green cover in 2025">
-            <div class="handle"></div>
-            <span class="tag l">2019</span><span class="tag r">2025</span>
-            <input type="range" min="0" max="100" value="50" aria-label="Move to compare 2019 and 2025">
+          <div class="switch" id="switch" role="tablist" aria-label="Map year">
+            <button role="tab" data-y="2019">2019</button><button role="tab" data-y="2025" class="on">2025</button><button id="play" aria-label="Play">&#9654; Play</button>
+          </div>
+          <div class="flip" id="flip">
+            <img src="img/map_2019.webp" data-y="2019" alt="Map of Lahore's green cover in 2019">
+            <img src="img/map_2025.webp" data-y="2025" class="on" alt="Map of Lahore's green cover in 2025">
+            <div class="flip-stat"><b id="flip-km">241 km²</b><span id="flip-cap">non-crop green in 2025</span></div>
           </div>
         </div>
       </div>
@@ -266,7 +276,7 @@ footer { padding: 40px 0 60px; font-size: 13px; color: var(--muted); }
           <p class="chart-title">What happened to 2019's farmland by 2025</p>
           <p class="chart-sub">714 km² that both the crop model and Dynamic World called farmland in 2019</p>
           <div id="chart-fate"></div>
-          <div class="callout">About <b>41 km²</b> of 2019 farmland was built on by 2025, and another <b>10 km²</b> was cleared bare. A separate land-budget model gives a matching 38 km², so two methods agree.</div>
+          <div class="callout">About <b>41 km²</b> of 2019 farmland was built on by 2025, and another <b>10 km²</b> was cleared bare. The separate land-budget model gives a similar 51 km² built-up and 39 km² bare, so two methods agree on the size of the loss.</div>
         </div>
       </div>
     </div>
@@ -363,7 +373,14 @@ var DATA = {
     top: [['Zaman Park', 25], ['Mayo Gardens', 23.9], ["GOR (Officers' Residences)", 23.5], ['Mall Road (Charing Cross)', 18], ['Upper Mall', 17]],
     bottom: [['Bagrian', 1], ['DHA Phase 9 Prism', 1.5], ['Chah Miran', 1.5], ['Farooq Colony', 1.6], ['Eden Cottages', 1.8]]},
   // land budget (km², latest complete year); null until the corrected run is in
-  budget: null,
+  budget: {year: 2025, trees: 70, grass: 171, built: 496, crops: 748, water: 11, bare: 197,
+    sub: {crops: 'Most fields grow two crops a year: wheat in winter, rice in summer',
+          built: 'Buildings, roads, other paved land and yards',
+          bare: 'Cleared plots, building sites, brick kilns and the Ravi riverbed; probably over-counted (Dynamic World: about 100 km²)'},
+    parts: {crops: [['Two crops a year', 603, '#8a5a00'], ['Winter only (wheat season)', 89, '#c98714'],
+                    ['Summer only (rice season)', 49, '#e3b860'], ['Unclear', 8, '#efdcae']],
+            built: [['Buildings', 178, '#3f4550'], ['Roads (about)', 119, '#6b7280'], ['Other paved and yards', 199, '#aab0b9']]},
+    note: 'Trees and grass are this study’s tested figures; the rest of each 10 m pixel goes to its most likely class. Roads: OpenStreetMap length × typical width (range 89–149 km²). Buildings: Google Open Buildings 2023.'},
   checks: [
     ['PASS', 'Clear images', 'At least 90% of the city clearly seen in every season'],
     ['PASS', 'Stable where nothing changed', 'Tree share varies by 4 points or less in protected forest and stable canopy'],
@@ -375,7 +392,10 @@ var DATA = {
     ['PASS', 'Classifier accuracy', 'Grass 96% and crops 99% correct on 1,373 held-out points'],
     ['PASS', 'Trend', 'Only just significant (+5.0 km²/yr, CI +0.05 to +7.9), driven by grass'],
     ['PASS', 'NASA GEDI laser', 'Independent canopy heights agree with the tree change (r = 0.62)'],
-    ['PASS', 'New buildings', 'Green fell on 74% of the 21.4 km² newly built 2019–2023']
+    ['PASS', 'New buildings', 'Green fell on 74% of the 21.4 km² newly built 2019–2023'],
+    ['PASS', 'Land budget: farmland lost', 'Two separate methods both find about 40–50 km² of 2019 farmland built on by 2025'],
+    ['PASS', 'Land budget: official wheat', '692 km² of winter-season cropland, more than the 469 km² official wheat area (2024-25), as expected: wheat shares winter with fodder and vegetables'],
+    ['WARN', 'Land budget: bare ground', '197 km², about twice Dynamic World’s 100 km²; probably over-counted']
   ]
 };
 
@@ -562,8 +582,23 @@ function drawBudget() {
     var sub = (B.sub && B.sub[c[0]]) ? '<span class="sub">' + B.sub[c[0]] + '</span>' : '';
     return '<li data-k="' + c[0] + '"><i style="background:' + col(c[0]) + '"></i><span>' + c[1] + '</span><span class="km">' + fmt(B[c[0]]) + ' km²</span><span class="pc">' + fmt(100 * B[c[0]] / total, 1) + '%</span>' + sub + '</li>';
   }).join('');
+  // one 100% bar per big slice, segments labelled directly, a 2px gap between segments
+  var stack = function (title, key, parts) {
+    var sum = parts.reduce(function (s, p) { return s + p[1]; }, 0);
+    var segs = parts.map(function (p) {
+      return '<div class="seg" style="flex:' + p[1] + ';background:' + p[2] + '" title="' + p[0] + ': ' + fmt(p[1]) + ' km²"></div>';
+    }).join('');
+    var keys = parts.map(function (p) {
+      return '<span><i style="background:' + p[2] + '"></i>' + p[0] + ' <b>' + fmt(p[1]) + ' km²</b> · ' + fmt(100 * p[1] / sum) + '%</span>';
+    }).join('');
+    return '<div class="stack"><p class="chart-title"><i class="dot" style="background:' + col(key) + '"></i>' + title + '</p>' +
+      '<div class="bar">' + segs + '</div><div class="keys">' + keys + '</div></div>';
+  };
   host.innerHTML = '<div class="grid2"><div class="card"><div class="waffle" id="waffle">' + sq + '</div><p class="note">' + B.year + ' · 1 square = 1% of the district, about ' + fmt(total / 100) + ' km²</p></div>' +
-    '<div class="card"><ul class="budget-list" id="blist">' + items + '</ul><p class="note">' + (B.note || '') + '</p></div></div>';
+    '<div class="card"><ul class="budget-list" id="blist">' + items + '</ul><p class="note">' + (B.note || '') + '</p></div></div>' +
+    '<div class="card" style="margin-top:20px"><h3 style="margin-bottom:14px">Inside the two biggest slices</h3><div class="grid2">' +
+    stack('Cropland, ' + fmt(B.crops) + ' km²: by growing season', 'crops', B.parts.crops) +
+    stack('Built-up, ' + fmt(B.built) + ' km²: what the grey is', 'built', B.parts.built) + '</div></div>';
   var waffle = document.getElementById('waffle');
   var light = function (k) {
     waffle.classList.toggle('dim', !!k);
@@ -622,13 +657,24 @@ function drawChecks() {
   }).join('');
 }
 
-// ---------------------------------------------------------------- before / after slider
+// ---------------------------------------------------------------- 2019 / 2025 map switch (crossfade)
 (function () {
-  var box = document.getElementById('compare'), input = box.querySelector('input'),
-      after = box.querySelector('.after'), handle = box.querySelector('.handle');
-  input.addEventListener('input', function () {
-    after.style.clipPath = 'inset(0 0 0 ' + input.value + '%)';
-    handle.style.left = input.value + '%';
+  var KM = {2019: 207, 2025: 241}, timer = null;
+  var tabs = document.querySelectorAll('#switch [data-y]'), imgs = document.querySelectorAll('#flip img');
+  function show(y) {
+    tabs.forEach(function (t) { t.classList.toggle('on', t.getAttribute('data-y') === String(y)); });
+    imgs.forEach(function (i) { i.classList.toggle('on', i.getAttribute('data-y') === String(y)); });
+    document.getElementById('flip-km').textContent = KM[y] + ' km²';
+    document.getElementById('flip-cap').textContent = 'non-crop green in ' + y;
+  }
+  tabs.forEach(function (t) { t.addEventListener('click', function () { stop(); show(t.getAttribute('data-y')); }); });
+  var play = document.getElementById('play');
+  function stop() { clearInterval(timer); timer = null; play.innerHTML = '&#9654; Play'; }
+  play.addEventListener('click', function () {
+    if (timer) { stop(); return; }
+    var y = 2019; show(y);
+    play.innerHTML = '&#10074;&#10074; Pause';
+    timer = setInterval(function () { y = y === 2019 ? 2025 : 2019; show(y); }, 1400);
   });
 })();
 
