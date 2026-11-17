@@ -885,11 +885,11 @@ var PARA = {fontSize: '13px', color: '#333', margin: '4px 8px', whiteSpace: 'pre
 var IS_PHONE = false;
 
 // --- Header band
-var titleLabel = ui.Label('Lahore, Slice by Slice', {fontWeight: 'bold', fontSize: '26px',
+var titleLabel = ui.Label('City of Gardens?', {fontWeight: 'bold', fontSize: '26px',
   fontFamily: 'Georgia, serif', color: '#ffffff', backgroundColor: COL.dark, margin: '10px 8px 0 8px',
   textAlign: 'center', stretch: 'horizontal'});
-var subtitleLabel = ui.Label('Trees, lawns, farmland and the grey city, mapped from space every year, 2019\u20132026 ' +
-  '\u00b7 Sentinel-2, 10 m', {fontSize: '13px', color: '#d9ead3', backgroundColor: COL.dark,
+var subtitleLabel = ui.Label('Lahore gained lawns and lost fields, 2019\u20132025 ' +
+  '\u00b7 mapped from space every year at 10 m', {fontSize: '14px', color: '#d9ead3', backgroundColor: COL.dark,
   margin: '4px 8px 2px 8px', textAlign: 'center', stretch: 'horizontal'});
 var bylineLabel = ui.Label('A study by Muhammad Ejaz Sarwar (PAS)',
   {fontSize: '12px', fontStyle: 'italic', color: '#cfe3cb', backgroundColor: COL.dark,
