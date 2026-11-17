@@ -888,7 +888,7 @@ var IS_PHONE = false;
 var titleLabel = ui.Label('City of Gardens?', {fontWeight: 'bold', fontSize: '26px',
   fontFamily: 'Georgia, serif', color: '#ffffff', backgroundColor: COL.dark, margin: '10px 8px 0 8px',
   textAlign: 'center', stretch: 'horizontal'});
-var subtitleLabel = ui.Label('Lawns up. Fields down. Trees still at 4%.', {fontSize: '16px', fontWeight: 'bold',
+var subtitleLabel = ui.Label('Grass cover up. Fields down. Trees still at 4%.', {fontSize: '16px', fontWeight: 'bold',
   fontFamily: 'Georgia, serif', color: '#f2c45a', backgroundColor: COL.dark,
   margin: '4px 8px 2px 8px', textAlign: 'center', stretch: 'horizontal'});
 var bylineLabel = ui.Label('A study by Muhammad Ejaz Sarwar (PAS)',
@@ -1519,8 +1519,8 @@ function aboutPanel() {
     'small trees (about 70 km² shown is really about 76 km²; a change of under half a percentage point of ' +
     'Lahore, not 9 points).\n' +
     '• Grass is not counted where Google Dynamic World labels the land cropland that year, so fodder and ' +
-    'fallow fields are not mistaken for lawns. Much of the new grass is lawns and verges in housing schemes ' +
-    'built on former farmland: about 9% of Lahore’s farmland was lost to building between 2019 and 2025.\n' +
+    'fallow fields are not mistaken for lawns. Much of the new grass (lawns, road green belts, open grassland) is in housing ' +
+    'schemes built on former farmland: about 9% of Lahore’s farmland was lost to building between 2019 and 2025.\n' +
     '• Year-to-year changes are partly weather-related; the 2019–2025 increase is only just statistically ' +
     'significant, comes mostly from grass, and 7 years is a short record (details in "How We Know").\n' +
     '\u2022 The land budget\u2019s bare ground (197 km\u00b2 in 2025) is probably over-counted.\n' +

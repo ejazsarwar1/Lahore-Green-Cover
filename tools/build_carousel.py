@@ -169,7 +169,7 @@ def slide1(maps):
     d.text((70, 90), 'LAHORE DISTRICT · 2019–2025 · FROM SPACE', SANS_B(26), '#f2c45a')
     d.text((64, 140), 'City of', SERIF_B(130), '#ffffff')
     d.text((64, 290), 'Gardens?', SERIF_B(150), '#f2c45a')
-    d.text((70, 488), 'Lawns up. Fields down.', SERIF_B(52), '#ffffff')
+    d.text((70, 488), 'Grass cover up. Fields down.', SERIF_B(52), '#ffffff')
     d.text((70, 553), 'Trees still at 4%.', SERIF_B(52), '#f6a58c')
     d.rounded_rectangle([70, 650, W - 70, 1170], radius=28, fill=PAPER)
     paste_map(im, find_map(maps, 'map_2025'), (85, 660, W - 85, 1160))
@@ -180,7 +180,7 @@ def slide1(maps):
 
 def slide2(maps):
     im, d, y = base(2, 'Non-crop green cover', 'Lahore got a little greener, mostly in grass')
-    stat_card(d, (70, y + 30, 520, y + 262), '+34 km²', 'trees, lawns and parks added, 2019 to 2025', BRAND)
+    stat_card(d, (70, y + 30, 520, y + 262), '+34 km²', 'trees and grass added, 2019 to 2025', BRAND)
     stat_card(d, (560, y + 30, W - 70, y + 262),
               [('12%', SERIF_B(70), BRAND), (' → ', SYM(56), BRAND), ('14%', SERIF_B(70), BRAND)],
               'of the district: about 2 points more', BRAND)
@@ -213,8 +213,8 @@ def slide2(maps):
 
 
 def slide3(maps):
-    im, d, y = base(3, 'Where it grew', 'The new green is mostly lawns in new housing schemes')
-    mx, my, mw, mh = paste_map(im, find_map(maps, 'map_change'), (70, y + 16, W - 70, y + 556))
+    im, d, y = base(3, 'Where it grew', 'The new green is mostly grass, much of it in new schemes')
+    mx, my, mw, mh = paste_map(im, find_map(maps, 'map_change'), (70, y + 16, W - 70, y + 520))
     ky = my + mh + 22
     stops = ['#b2182b', '#f4a582', '#f7f7f7', '#a6dba0', '#1b7837']
     seg = (W - 140) / len(stops)
@@ -231,8 +231,8 @@ def slide3(maps):
         d.text((W - 70, yy), '+%d points' % pts, SANS_B(28), C['trees'], anchor='ra')
         d.line([(70, yy + 42), (W - 70, yy + 42)], LINE, 1)
         yy += 50
-    text_block(d, (70, yy + 18), 'Fields were never counted, so lawns and verges laid on former farmland show '
-               'up as new green.', SANS(26), MUTED, W - 140)
+    text_block(d, (70, yy + 18), 'Fields were never counted, so grass, road green belts and lawns laid on former farmland '
+               'show up as new green.', SANS(26), MUTED, W - 140)
     return im
 
 

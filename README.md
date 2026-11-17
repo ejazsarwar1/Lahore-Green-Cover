@@ -21,7 +21,7 @@
 
 - Lahore's non-crop green cover **grew by about 34 km² between 2019 and 2025**, and both NASA's GEDI space laser and Google Open Buildings point the same way.
 - The rise is **only just statistically significant** (+5.0 km²/yr, 95% CI +0.05 to +7.9) and comes mostly from grass. The tree trend is not significant. 7 years (2019–2025) is a short record, and year-to-year swings partly follow rainfall (r = 0.74).
-- **Lahore is losing farmland to construction.** Cropland fell from about 747 km² to 681 km² (−9%) between 2019 and 2025, while built-up land grew by about the same amount (Google Dynamic World shows the same). The largest green gains are lawns and verges in new housing schemes such as DHA Phases 7 and 8, built on former fields.
+- **Lahore is losing farmland to construction.** Cropland fell from about 747 km² to 681 km² (−9%) between 2019 and 2025, while built-up land grew by about the same amount (Google Dynamic World shows the same). The largest green gains are grass (lawns, road green belts, open grassland) in new housing schemes such as DHA Phases 7 and 8, built on former fields.
 - Green is also lost to construction inside the city. **21.4 km² was newly built between 2019 and 2023**, and green cover fell on 74% of that land.
 - The model under-counts tree area by about 9% of itself, mostly small trees. Allowing for this, 2025 tree cover is about 76 km², not 70 km². That's a change of less than half a percentage point of the district.
 
