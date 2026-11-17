@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lahore, Slice by Slice</title>
+<meta name="description" content="Seven years of satellite images show where Lahore's trees, lawns, farmland and grey city went. A study by Muhammad Ejaz Sarwar (PAS).">
+<meta property="og:title" content="Lahore, Slice by Slice">
+<meta property="og:description" content="Where Lahore's green, grey and farmland went, 2019–2025, mapped from space.">
+<meta property="og:image" content="img/map_2025.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --paper: #f6f3ea; --card: #fffdf8; --ink: #14231d; --ink-2: #3d4a44; --muted: #6b756f; --line: #e3ddcf;
+  --brand: #14532d; --brand-2: #1f6e3d; --accent: #c98714;
+  --trees: #1f6e3d; --grass: #9cc44a; --built: #6b7280; --crops: #c98714; --water: #2f8ad0; --bare: #c0573a;
+  --gain: #1f6e3d; --loss: #b4361f;
+  --radius: 18px; --shadow: 0 1px 2px rgba(20,35,29,.06), 0 8px 24px rgba(20,35,29,.06);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.6 Inter, system-ui, sans-serif; }
+img { max-width: 100%; display: block; }
+a { color: var(--brand-2); }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+h1, h2, h3 { font-family: Fraunces, Georgia, serif; line-height: 1.15; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: clamp(28px, 4vw, 42px); }
+h3 { font-size: 20px; font-family: Inter, sans-serif; font-weight: 700; }
+p { margin: 0 0 14px; }
+.kicker { font: 700 13px/1 Inter, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+.lede { font-size: 19px; color: var(--ink-2); max-width: 680px; }
+.muted { color: var(--muted); font-size: 14px; }
+
+/* ---- top bar */
+.top { position: sticky; top: 0; z-index: 20; background: rgba(246,243,234,.9); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 16px; height: 60px; }
+.brand { font: 800 18px Fraunces, serif; color: var(--brand); text-decoration: none; white-space: nowrap; }
+.chapters { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin-left: auto; }
+.chapters::-webkit-scrollbar { display: none; }
+.chapters a { text-decoration: none; color: var(--ink-2); font-size: 14px; font-weight: 600; padding: 8px 12px; border-radius: 999px; white-space: nowrap; }
+.chapters a:hover, .chapters a.on { background: var(--brand); color: #fff; }
+
+/* ---- buttons */
+.btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 999px; font: 700 16px Inter, sans-serif; text-decoration: none; border: 2px solid var(--brand); transition: transform .15s, box-shadow .15s; }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20,83,45,.25); }
+.btn.solid { background: var(--brand); color: #fff; }
+.btn.ghost { background: transparent; color: var(--brand); }
+.btn .arr { font-size: 18px; }
+
+/* ---- hero */
+.hero { padding: 64px 0 40px; }
+.hero-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px; align-items: center; }
+.hero h1 { font-size: clamp(44px, 7vw, 84px); color: var(--brand); }
+.hero h1 span { color: var(--accent); }
+.byline { margin: 18px 0 26px; font-weight: 600; color: var(--ink-2); }
+.hero .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.gif { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 10px; }
+.gif img { border-radius: 12px; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 44px; }
+.tile { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border-top: 5px solid var(--c, var(--brand)); }
+.tile b { display: block; font: 800 40px/1 Fraunces, serif; color: var(--ink); margin-bottom: 8px; }
+.tile span { font-size: 14px; color: var(--ink-2); }
+
+/* ---- chapters */
+section.ch { padding: 72px 0; border-top: 1px solid var(--line); }
+.ch-head { max-width: 760px; margin-bottom: 28px; }
+.ch-head h2 { margin-bottom: 14px; }
+.card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-6-4 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+.chart-title { font: 700 17px Inter, sans-serif; margin: 0 0 4px; }
+.chart-sub { font-size: 14px; color: var(--muted); margin: 0 0 12px; }
+.note { font-size: 13px; color: var(--muted); margin-top: 10px; }
+.callout { border-left: 4px solid var(--accent); background: #fbf3e2; padding: 14px 18px; border-radius: 0 12px 12px 0; font-size: 15px; margin-top: 16px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); margin: 6px 0 10px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+svg text { font-family: Inter, sans-serif; }
+.axis text { fill: var(--muted); font-size: 12px; }
+.axis line, .grid line { stroke: #ebe6da; }
+.tip { position: fixed; pointer-events: none; z-index: 50; background: #14231d; color: #fff; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; box-shadow: 0 6px 20px rgba(0,0,0,.2); opacity: 0; transition: opacity .1s; max-width: 260px; }
+.tip b { font-weight: 700; }
+.tip .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.tip .row i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 6px; }
+details.table { margin-top: 12px; font-size: 14px; }
+details.table summary { cursor: pointer; color: var(--brand-2); font-weight: 600; }
+details.table table { border-collapse: collapse; margin-top: 8px; width: 100%; }
+details.table td, details.table th { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: right; }
+details.table th:first-child, details.table td:first-child { text-align: left; }
+
+/* before / after slider */
+.compare { position: relative; user-select: none; touch-action: pan-y; }
+.compare img { width: 100%; }
+.compare .after { position: absolute; inset: 0; clip-path: inset(0 0 0 50%); }
+.compare .handle { position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; background: var(--ink); transform: translateX(-1px); }
+.compare .handle::after { content: '\2194'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.compare .tag { position: absolute; top: 8px; padding: 4px 12px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 700; font-size: 14px; }
+.compare .tag.l { left: 8px; } .compare .tag.r { right: 8px; }
+.compare input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; margin: 0; }
+
+/* lists */
+.rank { list-style: none; padding: 0; margin: 0; }
+.rank li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.rank li b { font-variant-numeric: tabular-nums; }
+.up { color: var(--gain); } .down { color: var(--loss); }
+
+/* waffle */
+.waffle { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; }
+.waffle div { aspect-ratio: 1; border-radius: 3px; transition: opacity .15s; }
+.waffle.dim div { opacity: .2; } .waffle.dim div.hi { opacity: 1; }
+.budget-list { list-style: none; padding: 0; margin: 0; }
+.budget-list li { display: grid; grid-template-columns: 14px 1fr auto auto; gap: 10px; align-items: center; padding: 9px 6px; border-bottom: 1px solid var(--line); cursor: default; border-radius: 8px; }
+.budget-list li:hover { background: #f3eee1; }
+.budget-list i { width: 14px; height: 14px; border-radius: 3px; }
+.budget-list .km { font-weight: 700; font-variant-numeric: tabular-nums; }
+.budget-list .pc { color: var(--muted); font-variant-numeric: tabular-nums; width: 52px; text-align: right; }
+.budget-list .sub { grid-column: 2 / 5; font-size: 13px; color: var(--muted); }
+.pending { padding: 28px; border: 2px dashed var(--line); border-radius: var(--radius); color: var(--muted); text-align: center; }
+
+/* bullets */
+.bullet { margin: 0 0 26px; }
+.bullet .lab { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.bullet .lab b { font: 800 30px Fraunces, serif; }
+
+/* checks */
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.check { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); display: grid; grid-template-columns: 30px 1fr; gap: 10px; font-size: 14px; }
+.check .ic { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; }
+.check .pass { background: #2f7d4f; } .check .warn { background: #b7791f; }
+.check h4 { margin: 0 0 2px; font-size: 14px; }
+
+.cta-band { background: var(--brand); color: #fff; border-radius: 28px; padding: 44px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+.cta-band h2 { color: #fff; }
+.cta-band .btn.solid { background: #fff; color: var(--brand); border-color: #fff; }
+.cta-band .btn.ghost { color: #fff; border-color: rgba(255,255,255,.6); }
+footer { padding: 40px 0 60px; font-size: 13px; color: var(--muted); }
+
+@media (max-width: 860px) {
+  body { font-size: 16px; }
+  .hero { padding-top: 36px; }
+  .hero-grid, .grid2, .grid-6-4, .cta-band { grid-template-columns: 1fr; }
+  .tiles { grid-template-columns: 1fr 1fr; }
+  .tile b { font-size: 32px; }
+  .chapters { display: none; }
+  section.ch { padding: 52px 0; }
+  .card { padding: 18px; }
+  .cta-band { padding: 28px; }
+}
+</style>
+</head>
+<body>
+<div class="tip" id="tip"></div>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top">Lahore, Slice by Slice</a>
+    <nav class="chapters" id="chapters">
+      <a href="#green">Greener?</a>
+      <a href="#farmland">Farmland</a>
+      <a href="#pie">The whole pie</a>
+      <a href="#fair">Green for whom?</a>
+      <a href="#know">How we know</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-grid">
+        <div>
+          <div class="kicker">Lahore district · 2019 → 2025 · from space</div>
+          <h1>Lahore, <span>slice</span> by slice</h1>
+          <p class="lede">Seven years of Sentinel-2 satellite images, read at 10 m. Where did the city's trees, lawns and parks grow, where did its farmland go, and who lives near green space?</p>
+          <p class="byline">A study by Muhammad Ejaz Sarwar (PAS)</p>
+          <div class="ctas">
+            <a class="btn solid" href="#green">Start the story <span class="arr">&darr;</span></a>
+            <a class="btn ghost" href="https://lahore-green-cover-2000-2026.projects.earthengine.app/view/lahore-green-cover-2019-2026">Explore the live map <span class="arr">&rarr;</span></a>
+          </div>
+        </div>
+        <figure class="gif" style="margin:0">
+          <img src="img/timelapse.gif" alt="Animated map of Lahore's non-crop green cover for each year from 2019 to 2026" loading="eager">
+        </figure>
+      </div>
+      <div class="tiles">
+        <div class="tile" style="--c: var(--trees)"><b>+34 km²</b><span>non-crop green, 2019 → 2025 (+16%): trees, lawns and parks</span></div>
+        <div class="tile" style="--c: var(--crops)"><b>−9%</b><span>farmland, 2019 → 2025: about 66 km² of fields lost</span></div>
+        <div class="tile" style="--c: var(--loss)"><b>4.1%</b><span>tree canopy of the district; the 3-30-300 rule asks for 30%</span></div>
+        <div class="tile" style="--c: var(--water)"><b>24%</b><span>of residents live within 300 m of a park of 0.5 ha or more</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1. GREENER? -->
+  <section class="ch" id="green">
+    <div class="wrap">
+      <div class="ch-head">
+        <div class="kicker">Chapter 1</div>
+        <h2>Lahore is a little greener, mostly in grass</h2>
+        <p class="lede">Non-crop green (trees, lawns, parks and grass, never crops) rose from 207 km² in 2019 to 241 km² in 2025. Tree cover barely moved; nearly all of the gain is grass and lawns.</p>
+      </div>
+      <div class="grid-6-4">
+        <div class="card">
+          <p class="chart-title">Non-crop green area, km²</p>
+          <p class="chart-sub">Trees and grass stacked; dashed line is the 2019–2025 trend. 2026 is provisional.</p>
+          <div class="legend"><span><i style="background:var(--trees)"></i>Trees</span><span><i style="background:var(--grass)"></i>Grass, lawns, parks</span><span><i style="background:none;border:2px dashed var(--ink-2);width:16px;height:0;border-radius:0"></i>Trend</span></div>
+          <div id="chart-green"></div>
+          <details class="table"><summary>Show the numbers</summary><div id="table-green"></div></details>
+          <div class="callout"><b>Is it a real trend?</b> Only just. The trend is +5.0 km² a year, with a 95% confidence interval of +0.05 to +7.9. It comes from grass; the tree trend is not significant. Seven years is a short record, and wet years are greener.</div>
+        </div>
+        <div class="card">
+          <p class="chart-title">Drag to compare 2019 and 2025</p>
+          <p class="chart-sub">Dark green: trees · light green: grass, lawns, parks · grey: built-up · cream: farmland</p>
+          <div class="compare" id="compare">
+            <img src="img/map_2019.webp" alt="Map of Lahore's green cover in 2019">
+            <img class="after" src="img/map_2025.webp" alt="Map of Lahore's green cover in 2025">
+            <div class="handle"></div>
+            <span class="tag l">2019</span><span class="tag r">2025</span>
+            <input type="range" min="0" max="100" value="50" aria-label="Move to compare 2019 and 2025">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-6-4" style="margin-top:20px">
+        <div class="card">
+          <p class="chart-title">Where green was gained and lost, 2019 → 2025</p>
+          <p class="chart-sub">Change in the green share of the land, smoothed over about 400 m</p>
+          <img src="img/map_change.webp" alt="Map of where green cover increased (green) and decreased (red) between 2019 and 2025" loading="lazy">
+          <svg width="100%" height="44" viewBox="0 0 400 44" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="dv"><stop offset="0" stop-color="#b2182b"/><stop offset=".33" stop-color="#f4a582"/><stop offset=".5" stop-color="#f7f7f7"/><stop offset=".67" stop-color="#a6dba0"/><stop offset="1" stop-color="#1b7837"/></linearGradient></defs>
+            <rect x="0" y="4" width="400" height="12" rx="6" fill="url(#dv)"/>
+          </svg>
+          <div style="display:flex;justify-content:space-between" class="muted"><span>green lost</span><span>no change</span><span>green gained</span></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:10px">The biggest gains are new housing schemes</h3>
+          <p class="muted">Green share change in the 1 km² squares that changed most. Lawns, verges and young trees in schemes built on former fields count as new green, because the fields themselves were never counted.</p>
+          <ul class="rank" id="gains"></ul>
+          <h3 style="margin:22px 0 10px">Where green fell most</h3>
+          <ul class="rank" id="losses"></ul>
+          <p class="note">Names are the nearest reference place, not boundaries.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. FARMLAND -->
+  <section class="ch" id="farmland">
+    <div class="wrap">
+      <div class="ch-head">
+        <div class="kicker">Chapter 2</div>
+        <h2>The city is growing over its fields</h2>
+        <p class="lede">Between 2019 and 2025 Lahore lost about 66 km² of farmland, roughly 9%, while built-up land grew by about the same amount. Two independent maps agree on the size of the loss.</p>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <p class="chart-title">Change since 2019, km²</p>
+          <p class="chart-sub">Farmland from this study's crop model; built-up from Google Dynamic World. 2026 is provisional.</p>
+          <div class="legend"><span><i style="background:var(--crops)"></i>Farmland</span><span><i style="background:var(--built)"></i>Built-up</span></div>
+          <div id="chart-farm"></div>
+          <details class="table"><summary>Show the numbers</summary><div id="table-farm"></div></details>
+        </div>
+        <div class="card">
+          <p class="chart-title">What happened to 2019's farmland by 2025</p>
+          <p class="chart-sub">714 km² that both the crop model and Dynamic World called farmland in 2019</p>
+          <div id="chart-fate"></div>
+          <div class="callout">About <b>41 km²</b> of 2019 farmland was built on by 2025, and another <b>10 km²</b> was cleared bare. A separate land-budget model gives a matching 38 km², so two methods agree.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. THE WHOLE PIE -->
+  <section class="ch" id="pie">
+    <div class="wrap">
+      <div class="ch-head">
+        <div class="kicker">Chapter 3</div>
+        <h2>All of Lahore, in 100 squares</h2>
+        <p class="lede">Every part of the district, about 1,695 km², split into six kinds of land. Each square is 1% of Lahore.</p>
+      </div>
+      <div id="budget"></div>
+    </div>
+  </section>
+
+  <!-- 4. GREEN FOR WHOM -->
+  <section class="ch" id="fair">
+    <div class="wrap">
+      <div class="ch-head">
+        <div class="kicker">Chapter 4</div>
+        <h2>Green for whom?</h2>
+        <p class="lede">How Lahore measures against three widely used green-space benchmarks, and how unevenly its trees are spread between neighbourhoods.</p>
+      </div>
+      <div class="grid-6-4">
+        <div class="card" id="bullets"></div>
+        <div class="card">
+          <p class="chart-title">Tree canopy by neighbourhood, 2025</p>
+          <p class="chart-sub">137 neighbourhoods; none reaches the 30% target</p>
+          <img src="img/map_canopy.webp" alt="Map of Lahore neighbourhoods coloured by tree canopy share" loading="lazy">
+          <div id="chart-bands"></div>
+        </div>
+      </div>
+      <div class="grid2" style="margin-top:20px">
+        <div class="card"><h3 style="margin-bottom:2px">Leafiest neighbourhoods</h3><p class="chart-sub">Tree canopy, 2025 · a full bar would be the 30% target</p><div id="chart-top"></div></div>
+        <div class="card"><h3 style="margin-bottom:2px">Least canopy</h3><p class="chart-sub">Tree canopy, 2025 · a full bar would be the 30% target</p><div id="chart-bottom"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. HOW WE KNOW -->
+  <section class="ch" id="know">
+    <div class="wrap">
+      <div class="ch-head">
+        <div class="kicker">Chapter 5</div>
+        <h2>How we know</h2>
+        <p class="lede">The model was tested against data it never saw: held-out canopy maps, held-out OpenStreetMap parks, land that cannot change, NASA's GEDI space laser and Google Open Buildings. Verdict: <b>partly supported</b>. The direction is confirmed; the size of the change is an estimate.</p>
+      </div>
+      <div class="checks" id="checks"></div>
+      <div class="callout" style="margin-top:20px"><b>Correction, November 2026.</b> An earlier version counted about 70 km² of fodder and fallow fields as grass. Grass is no longer counted on land Google Dynamic World labels cropland in that year; grass on fields that stayed fields fell from 44 km² to under 3 km².</div>
+    </div>
+  </section>
+
+  <section class="ch">
+    <div class="wrap">
+      <div class="cta-band">
+        <div>
+          <h2>Find your own neighbourhood</h2>
+          <p style="margin-top:12px;opacity:.9">The live map lets you pick any year, compare two years, zoom into 450 neighbourhoods and villages, and click any spot to read its values.</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <a class="btn solid" href="https://lahore-green-cover-2000-2026.projects.earthengine.app/view/lahore-green-cover-2019-2026">Open the live map <span class="arr">&rarr;</span></a>
+          <a class="btn ghost" href="https://github.com/ejazsarwar1/Lahore-Green-Cover">Method, code and data <span class="arr">&rarr;</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><b>A study by Muhammad Ejaz Sarwar (PAS).</b> Research estimates from free satellite data, not official statistics. 2026 is provisional.</p>
+    <p>Data: ESA/Copernicus Sentinel-2 and Sentinel-1 · Google Cloud Score+ · Meta/WRI 1 m canopy height · © OpenStreetMap contributors (ODbL) · Google Dynamic World · ESA WorldCover · NASA GEDI · Google Open Buildings · JRC Global Surface Water · JRC GHSL population · CHIRPS rainfall · geoBoundaries · Punjab Crop Reporting Service. Code under the MIT License.</p>
+  </div>
+</footer>
+
+<script>
+// ---------------------------------------------------------------- data (from the study's saved results)
+var DATA = {
+  years: [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026],
+  provisional: 2026,
+  trees: [62.92, 67.24, 73.45, 76.85, 74.04, 68.82, 69.81, 70.99],
+  grass: [144.32, 147.92, 151.82, 153.43, 154.85, 156.60, 171.40, 177.41],
+  trend: {slope: 5.00, intercept2019: 210.16, lo: 0.05, hi: 7.92},
+  cropModel: [747, 759, 723, 699, 674, 684, 681, 636],
+  cropDW: [856, 877, 837, 836, 791, 793, 793, 733],
+  builtDW: [685, 696, 678, 713, 773, 756, 751, 833],
+  fate: {total: 714.2, parts: [['Still farmland', 658.6, 'crops'], ['Built-up', 40.9, 'built'],
+    ['Bare ground', 9.9, 'bare'], ['Water', 4.3, 'water'], ['Trees, grass, shrub', 0.6, 'grass']]},
+  gains: [['DHA Phase 7', 16], ['Govt Servants Housing', 16], ['Lakhoder (Mehmood Booti)', 15], ['DHA Phase 8', 14]],
+  losses: [['Agrics Town', -7], ['Bahria Town', -7], ['DHA Phase 9 Prism', -6], ['Maraka (near Bahria Town)', -5]],
+  bench: {canopy: 4.1, perRes: 19, park: 24, bands: [72, 40, 22, 3, 0],
+    top: [['Zaman Park', 25], ['Mayo Gardens', 23.9], ["GOR (Officers' Residences)", 23.5], ['Mall Road (Charing Cross)', 18], ['Upper Mall', 17]],
+    bottom: [['Bagrian', 1], ['DHA Phase 9 Prism', 1.5], ['Chah Miran', 1.5], ['Farooq Colony', 1.6], ['Eden Cottages', 1.8]]},
+  // land budget (km², latest complete year); null until the corrected run is in
+  budget: null,
+  checks: [
+    ['PASS', 'Clear images', 'At least 90% of the city clearly seen in every season'],
+    ['PASS', 'Stable where nothing changed', 'Tree share varies by 4 points or less in protected forest and stable canopy'],
+    ['WARN', 'Trees vs 1 m canopy data', 'Tree area about 9% below held-out canopy data, mostly very small trees'],
+    ['PASS', 'Parks and crops', 'Only 2% of all grass lies in cropland; 43% of held-out park open land found'],
+    ['PASS', 'False change', 'About 1% false change on land that cannot change'],
+    ['PASS', 'Robust to settings', 'Change stays between +10% and +18% across model settings'],
+    ['WARN', 'Three methods', 'All agree green rose, but disagree on how much (+16% to +76%)'],
+    ['PASS', 'Classifier accuracy', 'Grass 96% and crops 99% correct on 1,373 held-out points'],
+    ['PASS', 'Trend', 'Only just significant (+5.0 km²/yr, CI +0.05 to +7.9), driven by grass'],
+    ['PASS', 'NASA GEDI laser', 'Independent canopy heights agree with the tree change (r = 0.62)'],
+    ['PASS', 'New buildings', 'Green fell on 74% of the 21.4 km² newly built 2019–2023']
+  ]
+};
+
+// ---------------------------------------------------------------- helpers
+var CSS = getComputedStyle(document.documentElement);
+function col(name) { return CSS.getPropertyValue('--' + name).trim(); }
+var NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent) {
+  var e = document.createElementNS(NS, tag);
+  for (var k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function svgIn(id, h) {
+  var host = document.getElementById(id);
+  host.innerHTML = '';
+  var w = Math.max(280, host.clientWidth);
+  var s = el('svg', {width: w, height: h, viewBox: '0 0 ' + w + ' ' + h, role: 'img'}, host);
+  return {svg: s, w: w, h: h};
+}
+function fmt(x, d) { return Number(x).toLocaleString('en-GB', {minimumFractionDigits: d || 0, maximumFractionDigits: d || 0}); }
+var tip = document.getElementById('tip');
+function showTip(html, ev) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  var x = ev.clientX + 16, y = ev.clientY + 16, r = tip.getBoundingClientRect();
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 16;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 16;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+function hideTip() { tip.style.opacity = 0; }
+function table(id, head, rows) {
+  var h = '<table><tr>' + head.map(function (c) { return '<th>' + c + '</th>'; }).join('') + '</tr>' +
+    rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>';
+  document.getElementById(id).innerHTML = h;
+}
+function sgn(v) { return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v); }
+function niceMax(v) { var p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / p * 2) / 2 * p; }
+
+// ---------------------------------------------------------------- chart 1: stacked green area
+function drawGreen() {
+  var c = svgIn('chart-green', 320), m = {l: 44, r: 92, t: 12, b: 30};
+  var Y = DATA.years, n = Y.length, tot = Y.map(function (_, i) { return DATA.trees[i] + DATA.grass[i]; });
+  var ymax = 300, iw = c.w - m.l - m.r, ih = c.h - m.t - m.b;
+  var x = function (i) { return m.l + iw * i / (n - 1); }, y = function (v) { return m.t + ih * (1 - v / ymax); };
+  var g = el('g', {'class': 'grid'}, c.svg), ax = el('g', {'class': 'axis'}, c.svg);
+  [0, 100, 200, 300].forEach(function (v) {
+    el('line', {x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v)}, g);
+    el('text', {x: m.l - 8, y: y(v) + 4, 'text-anchor': 'end'}, ax).textContent = v;
+  });
+  Y.forEach(function (yr, i) {
+    el('text', {x: x(i), y: c.h - 8, 'text-anchor': 'middle'}, ax).textContent = (c.w < 500 ? i % 2 === 0 : true) ? yr + (yr === DATA.provisional ? '*' : '') : '';
+  });
+  var area = function (lo, hi) {
+    var d = 'M' + x(0) + ',' + y(hi[0]);
+    for (var i = 1; i < n; i++) d += 'L' + x(i) + ',' + y(hi[i]);
+    for (var j = n - 1; j >= 0; j--) d += 'L' + x(j) + ',' + y(lo[j]);
+    return d + 'Z';
+  };
+  var zero = Y.map(function () { return 0; });
+  el('path', {d: area(zero, DATA.trees), fill: col('trees')}, c.svg);
+  el('path', {d: area(DATA.trees.map(function (v) { return v + 1.2; }), tot), fill: col('grass')}, c.svg);
+  // provisional year: pale overlay
+  el('rect', {x: x(n - 2), y: m.t, width: x(n - 1) - x(n - 2), height: ih, fill: '#fffdf8', opacity: .45}, c.svg);
+  var T = DATA.trend;
+  el('line', {x1: x(0), y1: y(T.intercept2019), x2: x(n - 2), y2: y(T.intercept2019 + 6 * T.slope),
+    stroke: col('ink-2'), 'stroke-width': 2, 'stroke-dasharray': '6 5'}, c.svg);
+  // direct labels at the right end
+  var lx = x(n - 1) + 8;
+  el('text', {x: lx, y: y(DATA.trees[n - 1] / 2) + 4, fill: col('ink'), 'font-size': 12, 'font-weight': 600}, c.svg).textContent = 'Trees';
+  el('text', {x: lx, y: y(DATA.trees[n - 1] + DATA.grass[n - 1] / 2) + 4, fill: col('ink'), 'font-size': 12, 'font-weight': 600}, c.svg).textContent = 'Grass';
+  el('text', {x: x(n - 2), y: y(tot[n - 2]) - 10, 'text-anchor': 'middle', fill: col('ink'), 'font-size': 13, 'font-weight': 700}, c.svg).textContent = Math.round(tot[n - 2]) + ' km²';
+  // hover crosshair
+  var cross = el('line', {y1: m.t, y2: m.t + ih, stroke: col('ink'), 'stroke-width': 1, opacity: 0}, c.svg);
+  var hit = el('rect', {x: m.l, y: m.t, width: iw, height: ih, fill: 'transparent'}, c.svg);
+  hit.addEventListener('mousemove', function (ev) {
+    var r = c.svg.getBoundingClientRect(), i = Math.round((ev.clientX - r.left - m.l) / iw * (n - 1));
+    i = Math.max(0, Math.min(n - 1, i));
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity', .5);
+    showTip('<b>' + Y[i] + (Y[i] === DATA.provisional ? ' (provisional)' : '') + '</b>' +
+      '<div class="row"><span><i style="background:' + col('grass') + '"></i>Grass, lawns, parks</span><b>' + fmt(DATA.grass[i], 1) + '</b></div>' +
+      '<div class="row"><span><i style="background:' + col('trees') + '"></i>Trees</span><b>' + fmt(DATA.trees[i], 1) + '</b></div>' +
+      '<div class="row"><span>Total, km²</span><b>' + fmt(tot[i], 1) + '</b></div>', ev);
+  });
+  hit.addEventListener('mouseleave', function () { cross.setAttribute('opacity', 0); hideTip(); });
+  table('table-green', ['Year', 'Trees', 'Grass', 'Total'], Y.map(function (yr, i) {
+    return [yr + (yr === DATA.provisional ? '*' : ''), fmt(DATA.trees[i], 1), fmt(DATA.grass[i], 1), fmt(tot[i], 1)];
+  }));
+}
+
+// ---------------------------------------------------------------- chart 2: farmland vs built-up lines
+function drawFarm() {
+  var c = svgIn('chart-farm', 300), m = {l: 44, r: 76, t: 14, b: 30};
+  // change since 2019 for each series (indexed to a common base: two maps, one unit, no false crossing)
+  var Y = DATA.years, n = Y.length, iw = c.w - m.l - m.r, ih = c.h - m.t - m.b, ymin = -150, ymax = 150;
+  var since = function (k) { return DATA[k].map(function (v) { return v - DATA[k][0]; }); };
+  var x = function (i) { return m.l + iw * i / (n - 1); }, y = function (v) { return m.t + ih * (1 - (v - ymin) / (ymax - ymin)); };
+  var g = el('g', {'class': 'grid'}, c.svg), ax = el('g', {'class': 'axis'}, c.svg);
+  [-150, -100, -50, 0, 50, 100, 150].forEach(function (v) {
+    el('line', {x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v), stroke: v === 0 ? '#b9b2a2' : '#ebe6da'}, g);
+    el('text', {x: m.l - 8, y: y(v) + 4, 'text-anchor': 'end'}, ax).textContent = (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v);
+  });
+  Y.forEach(function (yr, i) {
+    el('text', {x: x(i), y: c.h - 8, 'text-anchor': 'middle'}, ax).textContent = (c.w < 500 ? i % 2 === 0 : true) ? yr + (yr === DATA.provisional ? '*' : '') : '';
+  });
+  [['cropModel', 'crops', 'Farmland'], ['builtDW', 'built', 'Built-up']].forEach(function (s) {
+    var v = since(s[0]), d = '';
+    for (var i = 0; i < n - 1; i++) d += (i ? 'L' : 'M') + x(i) + ',' + y(v[i]);
+    el('path', {d: d, fill: 'none', stroke: col(s[1]), 'stroke-width': 2.5, 'stroke-linejoin': 'round'}, c.svg);
+    el('path', {d: 'M' + x(n - 2) + ',' + y(v[n - 2]) + 'L' + x(n - 1) + ',' + y(v[n - 1]), fill: 'none', stroke: col(s[1]), 'stroke-width': 2.5, 'stroke-dasharray': '4 4'}, c.svg);
+    for (var j = 0; j < n; j++) el('circle', {cx: x(j), cy: y(v[j]), r: j === n - 1 ? 4 : 4.5, fill: j === n - 1 ? '#fffdf8' : col(s[1]), stroke: j === n - 1 ? col(s[1]) : '#fffdf8', 'stroke-width': 2}, c.svg);
+    el('text', {x: x(n - 1) + 10, y: y(v[n - 1]) + 4, fill: col('ink'), 'font-size': 12, 'font-weight': 600}, c.svg).textContent = s[2];
+  });
+  var cross = el('line', {y1: m.t, y2: m.t + ih, stroke: col('ink'), 'stroke-width': 1, opacity: 0}, c.svg);
+  var hit = el('rect', {x: m.l, y: m.t, width: iw, height: ih, fill: 'transparent'}, c.svg);
+  hit.addEventListener('mousemove', function (ev) {
+    var r = c.svg.getBoundingClientRect(), i = Math.round((ev.clientX - r.left - m.l) / iw * (n - 1));
+    i = Math.max(0, Math.min(n - 1, i));
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity', .5);
+    showTip('<b>' + Y[i] + (Y[i] === DATA.provisional ? ' (provisional)' : '') + '</b>' +
+      '<div class="row"><span><i style="background:' + col('built') + '"></i>Built-up</span><b>' + DATA.builtDW[i] + ' km² (' + sgn(DATA.builtDW[i] - DATA.builtDW[0]) + ')</b></div>' +
+      '<div class="row"><span><i style="background:' + col('crops') + '"></i>Farmland</span><b>' + DATA.cropModel[i] + ' km² (' + sgn(DATA.cropModel[i] - DATA.cropModel[0]) + ')</b></div>' +
+      '<div class="row"><span>Farmland, Dynamic World</span><b>' + DATA.cropDW[i] + ' km²</b></div>', ev);
+  });
+  hit.addEventListener('mouseleave', function () { cross.setAttribute('opacity', 0); hideTip(); });
+  table('table-farm', ['Year', 'Farmland (this study)', 'Farmland (Dynamic World)', 'Built-up (Dynamic World)'],
+    Y.map(function (yr, i) { return [yr + (yr === DATA.provisional ? '*' : ''), DATA.cropModel[i], DATA.cropDW[i], DATA.builtDW[i]]; }));
+}
+
+// ---------------------------------------------------------------- chart 3: fate of 2019 farmland (ranked bars)
+function hbars(id, rows, opts) {
+  // rows: [label, value, colourName]; one bar per row, value label at the bar end.
+  // On narrow screens the name sits above its bar so the bars keep their length.
+  var narrow = document.getElementById(id).clientWidth < 480;
+  var bh = 22, gap = narrow ? 30 : 12, lw = narrow ? 0 : (opts.labelWidth || 150), h = rows.length * (bh + gap) + (narrow ? 20 : 0);
+  var c = svgIn(id, h), max = opts.max || Math.max.apply(null, rows.map(function (r) { return r[1]; }));
+  var iw = c.w - lw - (opts.valueWidth || 120);
+  rows.forEach(function (r, i) {
+    var y0 = i * (bh + gap) + (narrow ? 20 : 0), w = Math.max(3, iw * r[1] / max);
+    if (narrow) el('text', {x: 0, y: y0 - 6, fill: col('ink-2'), 'font-size': 13}, c.svg).textContent = r[0];
+    else el('text', {x: lw - 10, y: y0 + bh / 2 + 5, 'text-anchor': 'end', fill: col('ink-2'), 'font-size': 13}, c.svg).textContent = r[0];
+    var bar = el('rect', {x: lw, y: y0, width: w, height: bh, rx: 4, fill: col(r[2])}, c.svg);
+    el('text', {x: lw + w + 8, y: y0 + bh / 2 + 5, fill: col('ink'), 'font-size': 13, 'font-weight': 700}, c.svg).textContent = opts.label(r);
+    var hit = el('rect', {x: 0, y: y0 - gap / 2, width: c.w, height: bh + gap, fill: 'transparent'}, c.svg);
+    hit.addEventListener('mousemove', function (ev) { bar.setAttribute('opacity', .8); showTip(opts.tip(r), ev); });
+    hit.addEventListener('mouseleave', function () { bar.setAttribute('opacity', 1); hideTip(); });
+  });
+}
+function drawFate() {
+  var F = DATA.fate;
+  hbars("chart-fate", F.parts, {labelWidth: 130, valueWidth: 150,
+    label: function (r) { return fmt(r[1], 1) + ' km² · ' + fmt(100 * r[1] / F.total, 1) + '%'; },
+    tip: function (r) { return '<b>' + r[0] + ' by 2025</b><br>' + fmt(r[1], 1) + ' km² of 2019 farmland'; }});
+}
+
+// ---------------------------------------------------------------- lists
+function ranks() {
+  var put = function (id, rows, cls) {
+    document.getElementById(id).innerHTML = rows.map(function (r) {
+      return '<li><span>near ' + r[0] + '</span><b class="' + cls + '">' + (r[1] > 0 ? '+' : '−') + Math.abs(r[1]) + ' pts</b></li>';
+    }).join('');
+  };
+  put('gains', DATA.gains, 'up');
+  put('losses', DATA.losses, 'down');
+}
+
+// ---------------------------------------------------------------- chapter 3: waffle land budget
+var LB = [['trees', 'Trees'], ['grass', 'Grass, lawns, parks'], ['built', 'Built-up (grey)'], ['crops', 'Cropland'],
+          ['water', 'Water'], ['bare', 'Bare ground']];
+function drawBudget() {
+  var host = document.getElementById('budget'), B = DATA.budget;
+  if (!B) {
+    host.innerHTML = '<div class="pending"><b>Being finalised.</b> The six-class land budget is being re-run after a correction, so that water and bare ground are not over-counted. The figures will appear here.</div>';
+    return;
+  }
+  var total = LB.reduce(function (s, c) { return s + B[c[0]]; }, 0);
+  // largest-remainder rounding so the squares add up to exactly 100
+  var raw = LB.map(function (c) { return 100 * B[c[0]] / total; }), cells = raw.map(Math.floor);
+  var left = 100 - cells.reduce(function (a, b) { return a + b; }, 0);
+  raw.map(function (v, i) { return [v - Math.floor(v), i]; }).sort(function (a, b) { return b[0] - a[0]; })
+    .slice(0, left).forEach(function (p) { cells[p[1]]++; });
+  var sq = '';
+  LB.forEach(function (c, i) { for (var k = 0; k < cells[i]; k++) sq += '<div data-k="' + c[0] + '" style="background:' + col(c[0]) + '"></div>'; });
+  var items = LB.map(function (c) {
+    var sub = (B.sub && B.sub[c[0]]) ? '<span class="sub">' + B.sub[c[0]] + '</span>' : '';
+    return '<li data-k="' + c[0] + '"><i style="background:' + col(c[0]) + '"></i><span>' + c[1] + '</span><span class="km">' + fmt(B[c[0]]) + ' km²</span><span class="pc">' + fmt(100 * B[c[0]] / total, 1) + '%</span>' + sub + '</li>';
+  }).join('');
+  host.innerHTML = '<div class="grid2"><div class="card"><div class="waffle" id="waffle">' + sq + '</div><p class="note">' + B.year + ' · 1 square = 1% of the district, about ' + fmt(total / 100) + ' km²</p></div>' +
+    '<div class="card"><ul class="budget-list" id="blist">' + items + '</ul><p class="note">' + (B.note || '') + '</p></div></div>';
+  var waffle = document.getElementById('waffle');
+  var light = function (k) {
+    waffle.classList.toggle('dim', !!k);
+    Array.prototype.forEach.call(waffle.children, function (d) { d.classList.toggle('hi', d.getAttribute('data-k') === k); });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#blist li, #waffle div'), function (e) {
+    e.addEventListener('mouseenter', function () { light(e.getAttribute('data-k')); });
+    e.addEventListener('mouseleave', function () { light(null); });
+  });
+}
+
+// ---------------------------------------------------------------- chapter 4: bullet charts and bands
+function bullet(label, value, unit, max, marks, note, tone) {
+  var id = 'b' + Math.random().toString(36).slice(2);
+  var html = '<div class="bullet"><div class="lab"><span style="font-weight:600">' + label + '</span><b>' + value + unit + '</b></div><div id="' + id + '"></div><div class="muted">' + note + '</div></div>';
+  return {html: html, draw: function () {
+    var c = svgIn(id, 44), x = function (v) { return 2 + (c.w - 4) * v / max; };
+    el('rect', {x: 2, y: 10, width: c.w - 4, height: 14, rx: 7, fill: '#ece6d8'}, c.svg);
+    el('rect', {x: 2, y: 10, width: Math.max(8, x(value) - 2), height: 14, rx: 7, fill: col(tone)}, c.svg);
+    marks.forEach(function (mk) {
+      el('line', {x1: x(mk[0]), x2: x(mk[0]), y1: 4, y2: 30, stroke: col('ink'), 'stroke-width': 2.5}, c.svg);
+      el('text', {x: Math.min(c.w - 4, x(mk[0])), y: 42, 'text-anchor': x(mk[0]) > c.w - 60 ? 'end' : 'middle', fill: col('ink-2'), 'font-size': 12}, c.svg).textContent = mk[1];
+    });
+  }};
+}
+function drawBench() {
+  var B = DATA.bench;
+  var parts = [
+    bullet('Tree canopy, share of the district', B.canopy, '%', 35, [[30, 'target 30%']], 'The 3-30-300 rule asks for 30% canopy in every neighbourhood. The district figure includes farmland.', 'loss'),
+    bullet('Non-crop green per resident', B.perRes, ' m²', 55, [[9, 'minimum 9'], [50, 'ideal 50']], 'Commonly quoted minimum 9 m², ideal 50 m² per person (13 million residents, GHSL 2025).', 'accent'),
+    bullet('Residents within 300 m of a park', B.park, '%', 100, [[100, 'WHO/Europe: 100%']], 'Parks of 0.5 ha or more (OpenStreetMap).', 'loss')
+  ];
+  document.getElementById('bullets').innerHTML = '<p class="chart-title" style="margin-bottom:18px">Lahore against three benchmarks, 2025</p>' + parts.map(function (p) { return p.html; }).join('');
+  parts.forEach(function (p) { p.draw(); });
+  // neighbourhoods per canopy band, in the same colours as the canopy map above
+  var seq = ['#a50f15', '#fb6a4a', '#fcbba1', '#74c476', '#238b45'];
+  var names = ['under 5%', '5–10%', '10–20%', '20–30%', '30%+ (target)'];
+  hbars('chart-bands', B.bands.map(function (v, i) { return [names[i], v, 'seq' + i]; }), {labelWidth: 110, max: 80,
+    label: function (r) { return r[1] + ' neighbourhoods'; },
+    tip: function (r) { return '<b>Canopy ' + r[0] + '</b><br>' + r[1] + ' of 137 neighbourhoods'; }});
+  Array.prototype.forEach.call(document.querySelectorAll('#chart-bands rect[rx]'), function (r, i) { r.setAttribute('fill', seq[i]); });
+  var dots = function (id, rows) {
+    hbars(id, rows.map(function (r) { return [r[0], r[1], 'trees']; }), {labelWidth: 190, max: 30,
+      label: function (r) { return fmt(r[1], 1) + '%'; },
+      tip: function (r) { return '<b>' + r[0] + '</b><br>tree canopy ' + fmt(r[1], 1) + '% (target 30%)'; }});
+  };
+  dots('chart-top', B.top);
+  dots('chart-bottom', B.bottom);
+}
+
+// ---------------------------------------------------------------- checks
+function drawChecks() {
+  document.getElementById('checks').innerHTML = DATA.checks.map(function (c) {
+    var pass = c[0] === 'PASS';
+    return '<div class="check"><span class="ic ' + (pass ? 'pass' : 'warn') + '" aria-label="' + (pass ? 'passed' : 'warning') + '">' + (pass ? '&#10003;' : '!') + '</span><div><h4>' + c[1] + '</h4>' + c[2] + '</div></div>';
+  }).join('');
+}
+
+// ---------------------------------------------------------------- before / after slider
+(function () {
+  var box = document.getElementById('compare'), input = box.querySelector('input'),
+      after = box.querySelector('.after'), handle = box.querySelector('.handle');
+  input.addEventListener('input', function () {
+    after.style.clipPath = 'inset(0 0 0 ' + input.value + '%)';
+    handle.style.left = input.value + '%';
+  });
+})();
+
+// ---------------------------------------------------------------- chapter highlighting in the top bar
+(function () {
+  var links = document.querySelectorAll('#chapters a');
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id); });
+    });
+  }, {rootMargin: '-45% 0px -50% 0px'});
+  document.querySelectorAll('section.ch[id]').forEach(function (s) { obs.observe(s); });
+})();
+
+function drawAll() { drawGreen(); drawFarm(); drawFate(); drawBudget(); drawBench(); }
+ranks(); drawChecks(); drawAll();
+var rt; addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(drawAll, 150); });
+</script>
+</body>
+</html>

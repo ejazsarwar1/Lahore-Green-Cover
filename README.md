@@ -4,7 +4,9 @@
 
 ![Timelapse of Lahore's non-crop green cover, 2019–2026](graphics/lahore_green_timelapse.gif)
 
-**▶ [Open the interactive app](https://lahore-green-cover-2000-2026.projects.earthengine.app/view/lahore-green-cover)**: yearly maps, change maps, neighbourhood benchmarks and the verification results. It works on phones too.
+**▶ [Read the visual story](https://ejazsarwar1.github.io/Lahore-Green-Cover/)**: the findings in five short chapters with interactive charts.
+
+**▶ [Open the interactive app](https://lahore-green-cover-2000-2026.projects.earthengine.app/view/lahore-green-cover-2019-2026)**: yearly maps, change maps, land budget, neighbourhood benchmarks and the verification results. It works on phones too.
 
 ---
 
@@ -83,6 +85,8 @@ Ten scored checks test the model against data it was **not** trained on:
 | `scripts/lahore_v7_A_build.js` | Earth Engine script A: trains the models and saves one map per year as assets (run once) |
 | `scripts/lahore_v7_B_app.js` | Earth Engine script B: the interactive app (yearly maps, change, timelapse, benchmarks, verification) |
 | `scripts/lahore_v8_C_landbudget.js` | Earth Engine script C (in progress): six-class land budget (trees, grass, crops, built-up, bare, water) from crop calendars, radar and building data |
+| `docs/` | The visual story site (GitHub Pages): `index.html` and map images |
+| `tools/prep_site_images.py` | Prepares the map images for the story site |
 | `tools/road_area.py` | Road surface area from OpenStreetMap (length × typical width by road type) |
 | `data/lahore_osm_roads_2026.tsv` | OpenStreetMap road lengths by type for Lahore district (input to `road_area.py`) |
 | `data/lahore_osm_green.zip` | 1,731 OpenStreetMap green-space polygons for Lahore (shapefile), used for training and testing |
