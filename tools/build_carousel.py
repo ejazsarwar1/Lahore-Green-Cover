@@ -231,8 +231,8 @@ def slide3(maps):
         d.text((W - 70, yy), '+%d points' % pts, SANS_B(28), C['trees'], anchor='ra')
         d.line([(70, yy + 42), (W - 70, yy + 42)], LINE, 1)
         yy += 50
-    text_block(d, (70, yy + 18), 'Crop fields don’t count as green cover, so when a field becomes grass, a lawn or '
-               'a road green belt, it shows up as new green.', SANS(26), MUTED, W - 140)
+    text_block(d, (70, yy + 18), 'This study counts trees, grass and parks as green, not crop fields, so a field '
+               'turned into grass or a green belt shows up as new green.', SANS(26), MUTED, W - 140)
     return im
 
 
