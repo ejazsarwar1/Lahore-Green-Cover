@@ -349,13 +349,11 @@ def slide7(maps):
     for ok, t in checks:
         tick(d, 93, yy + 22, ok)
         yy = text_block(d, (140, yy + 2), t, SANS(29), INK2, W - 210) + 20
-    by = max(yy + 24, H - 470)
-    d.rounded_rectangle([70, by, W - 70, by + 320], radius=28, fill=BRAND)
+    by = max(yy + 24, H - 400)
+    d.rounded_rectangle([70, by, W - 70, by + 230], radius=28, fill=BRAND)
     d.text((110, by + 42), 'Find your own neighbourhood', SERIF_B(48), '#ffffff')
     text_block(d, (110, by + 118), 'Live map, visual story, code and data: links in the first comment.',
                SANS(30), '#d9ead3', W - 220)
-    d.text((110, by + 250), 'Personal research with open satellite data · estimates, not official statistics',
-           SANS(22), '#a9c9b0')
     return im
 
 
